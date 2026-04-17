@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./BE
+      dockerfile: Dockerfile
+    container_name: aimock_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./BE/.env.docker
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - aimock_net
+
+  frontend:
+    build:
+      context: ./FE
+      dockerfile: Dockerfile
+    container_name: aimock_frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    networks:
+      - aimock_net
+
+  mongo:
+    image: mongo:7
+    container_name: aimock_mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - aimock_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: aimock_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - aimock_net
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  aimock_net:
+    driver: bridge
