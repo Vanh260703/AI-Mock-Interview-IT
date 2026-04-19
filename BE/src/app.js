@@ -3,19 +3,27 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const { generalLimiter } = require('./config/rateLimit');
 
 const healthRouter = require('./routes/health.route');
+const authRouter = require('./routes/auth.route');
+const adminRouter = require('./routes/admin.route');
 
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(generalLimiter);
 
 // Routes
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 
 // 404 handler
 app.use((req, res) => {

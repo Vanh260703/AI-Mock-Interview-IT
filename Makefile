@@ -1,4 +1,4 @@
-.PHONY: help up down build restart logs ps clean dev-be dev-fe
+.PHONY: help up down build rebuild rebuild-be restart logs ps clean dev-be dev-fe
 
 help:
 	@echo ""
@@ -28,6 +28,12 @@ down:
 
 build:
 	docker compose build
+
+rebuild:
+	docker compose down && docker compose build --no-cache && docker compose up -d
+
+rebuild-be:
+	docker compose stop backend && docker compose build --no-cache backend && docker compose up -d backend
 
 restart:
 	docker compose down && docker compose up -d
