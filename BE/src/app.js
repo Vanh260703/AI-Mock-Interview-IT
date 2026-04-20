@@ -10,6 +10,7 @@ const healthRouter   = require('./routes/health.route');
 const authRouter     = require('./routes/auth.route');
 const adminRouter    = require('./routes/admin.route');
 const questionRouter = require('./routes/question.route');
+const aiRouter       = require('./routes/ai.route');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/health',    healthRouter);
 app.use('/api/auth',     authRouter);
 app.use('/api/admin',    adminRouter);
 app.use('/api/questions', questionRouter);
+app.use('/api/ai',       aiRouter);
 
 // 404 handler
 app.use((req, res) => {
