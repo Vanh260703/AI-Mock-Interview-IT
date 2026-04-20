@@ -22,9 +22,9 @@ const createQueue = (name) => {
   return queue;
 };
 
-// Example queues — add more as needed
 const queues = {
   interviewQueue: createQueue('interview'),
+  feedbackQueue:  createQueue('feedback'),
 };
 
 module.exports = { createQueue, queues };

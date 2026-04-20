@@ -15,6 +15,8 @@ const start = async () => {
     await seedAdmin();
     await seedQuestions();
 
+    require('./workers/feedback.worker'); // khởi động Bull workers
+
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });

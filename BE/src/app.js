@@ -12,6 +12,7 @@ const adminRouter    = require('./routes/admin.route');
 const questionRouter   = require('./routes/question.route');
 const aiRouter         = require('./routes/ai.route');
 const interviewRouter  = require('./routes/interview.route');
+const feedbackRouter   = require('./routes/feedback.route');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/admin',    adminRouter);
 app.use('/api/questions',  questionRouter);
 app.use('/api/ai',         aiRouter);
 app.use('/api/interviews', interviewRouter);
+app.use('/api/feedback',   feedbackRouter);
 
 // 404 handler
 app.use((req, res) => {
