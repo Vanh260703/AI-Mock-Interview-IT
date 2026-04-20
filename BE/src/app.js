@@ -6,9 +6,10 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const { generalLimiter } = require('./config/rateLimit');
 
-const healthRouter = require('./routes/health.route');
-const authRouter = require('./routes/auth.route');
-const adminRouter = require('./routes/admin.route');
+const healthRouter   = require('./routes/health.route');
+const authRouter     = require('./routes/auth.route');
+const adminRouter    = require('./routes/admin.route');
+const questionRouter = require('./routes/question.route');
 
 const app = express();
 
@@ -21,9 +22,10 @@ app.use(cookieParser());
 app.use(generalLimiter);
 
 // Routes
-app.use('/api/health', healthRouter);
-app.use('/api/auth', authRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/health',    healthRouter);
+app.use('/api/auth',     authRouter);
+app.use('/api/admin',    adminRouter);
+app.use('/api/questions', questionRouter);
 
 // 404 handler
 app.use((req, res) => {
