@@ -1,6 +1,8 @@
 const groq = require('../config/groq');
+const { toFile } = require('groq-sdk');
 
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL   = 'llama-3.3-70b-versatile';
+const WHISPER_MODEL = 'whisper-large-v3';
 
 // Parse JSON từ AI response (handle trường hợp AI wrap trong markdown code block)
 const parseAIJson = (raw) => {
@@ -94,4 +96,18 @@ Return ONLY valid JSON, no markdown:
   return parseAIJson(completion.choices[0]?.message?.content ?? '{}');
 };
 
-module.exports = { gradeAnswer, generateSessionFeedback };
+// Transcribe audio/video buffer thành text bằng GROQ Whisper
+const transcribeAudio = async (buffer, mimetype, originalname = 'audio.webm') => {
+  const file = await toFile(buffer, originalname, { type: mimetype });
+
+  const transcription = await groq.audio.transcriptions.create({
+    file,
+    model:           WHISPER_MODEL,
+    response_format: 'text',
+  });
+
+  // GROQ trả về string khi response_format='text'
+  return typeof transcription === 'string' ? transcription.trim() : transcription.text?.trim() ?? '';
+};
+
+module.exports = { gradeAnswer, generateSessionFeedback, transcribeAudio };

@@ -3,6 +3,7 @@ const Question         = require('../models/question.model');
 const Answer           = require('../models/answer.model');
 const Feedback         = require('../models/feedback.model');
 const { queues }       = require('../config/bull');
+const { transcribeAudio } = require('../services/ai.service');
 
 const JOB_OPTIONS = {
   attempts:         3,
@@ -136,6 +137,11 @@ exports.submitAnswer = async (req, res, next) => {
     if (req.mediaUrl) {
       if (req.mediaType === 'video') videoUrl = req.mediaUrl;
       else                           audioUrl = req.mediaUrl;
+    }
+
+    // Nếu có file upload mà không có text → tự động speech-to-text
+    if (req.file && !content?.trim()) {
+      content = await transcribeAudio(req.file.buffer, req.file.mimetype, req.file.originalname);
     }
 
     if (!questionId) return res.status(400).json({ message: 'questionId is required' });
