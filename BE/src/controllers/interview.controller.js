@@ -125,11 +125,18 @@ exports.getSession = async (req, res, next) => {
 };
 
 // POST /api/interviews/:id/answers
-// Body: { questionId, content, duration, audioUrl, videoUrl, status }
-// Chỉ lưu answer — không gọi AI ở đây
+// multipart/form-data: media (file, optional) + các field JSON
+// Body fields: { questionId, content, duration, audioUrl, videoUrl, status }
+// Nếu có file upload (field "media"), URL từ Cloudinary sẽ override audioUrl/videoUrl
 exports.submitAnswer = async (req, res, next) => {
   try {
-    const { questionId, content, duration = 0, audioUrl, videoUrl, status = 'submitted' } = req.body;
+    let { questionId, content, duration = 0, audioUrl, videoUrl, status = 'submitted' } = req.body;
+
+    // Nếu middleware upload đã xử lý file → gán URL từ Cloudinary
+    if (req.mediaUrl) {
+      if (req.mediaType === 'video') videoUrl = req.mediaUrl;
+      else                           audioUrl = req.mediaUrl;
+    }
 
     if (!questionId) return res.status(400).json({ message: 'questionId is required' });
 

@@ -41,7 +41,7 @@ const interviewSessionSchema = new mongoose.Schema(
       questionCount:   { type: Number, default: 5 },
       difficulty:      { type: String, enum: ['easy', 'medium', 'hard', 'mixed'], default: 'mixed' },
       topics:          [{ type: String }],
-      timePerQuestion: { type: Number, default: 120 }, // giây
+      timePerQuestion: { type: Number, default: 300 }, // giây
       role:            { type: String, enum: ['FE', 'BE', 'FS', 'BA', 'DA', 'DS', 'DevOps', 'Mobile', 'General'], default: null },
       level:           { type: String, enum: ['intern', 'fresher', 'junior', 'middle', 'senior'], default: null },
     },
