@@ -28,6 +28,20 @@ const questionSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Vị trí công việc câu hỏi hướng đến
+    role: {
+      type: String,
+      enum: ['FE', 'BE', 'FS', 'BA', 'DA', 'DS', 'DevOps', 'Mobile', 'General'],
+      default: 'General',
+    },
+
+    // Cấp độ kinh nghiệm phù hợp
+    level: {
+      type: String,
+      enum: ['intern', 'fresher', 'junior', 'middle', 'senior'],
+      default: 'junior',
+    },
+
     // Tags bổ sung để filter
     tags: [{ type: String, trim: true }],
 
@@ -61,6 +75,7 @@ const questionSchema = new mongoose.Schema(
 );
 
 questionSchema.index({ category: 1, difficulty: 1, topic: 1 });
+questionSchema.index({ role: 1, level: 1 });
 questionSchema.index({ tags: 1 });
 
 module.exports = mongoose.model('Question', questionSchema);

@@ -11,6 +11,8 @@ services:
       - "3000:3000"
     env_file:
       - ./BE/.env.docker
+    volumes:
+      - ./BE/src:/app/src  # hot-reload: sync source code vào container
     depends_on:
       - mongo
       - redis

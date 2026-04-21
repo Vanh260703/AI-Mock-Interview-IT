@@ -4,13 +4,15 @@ const Question = require('../models/question.model');
 // Query: category, difficulty, topic, tags, page, limit
 exports.getQuestions = async (req, res, next) => {
   try {
-    const { category, difficulty, topic, tags, page = 1, limit = 10 } = req.query;
+    const { category, difficulty, topic, tags, role, level, page = 1, limit = 10 } = req.query;
 
     const filter = { isActive: true };
     if (category)   filter.category   = category;
     if (difficulty) filter.difficulty = difficulty;
     if (topic)      filter.topic      = { $regex: topic, $options: 'i' };
     if (tags)       filter.tags       = { $in: tags.split(',').map((t) => t.trim()) };
+    if (role)       filter.role       = role;
+    if (level)      filter.level      = level;
 
     const pageNum  = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
@@ -43,12 +45,14 @@ exports.getQuestions = async (req, res, next) => {
 // Query: category, difficulty, topic, limit, page
 exports.getRandomQuestions = async (req, res, next) => {
   try {
-    const { category, difficulty, topic, page = 1, limit = 10 } = req.query;
+    const { category, difficulty, topic, role, level, page = 1, limit = 10 } = req.query;
 
     const filter = { isActive: true };
     if (category)   filter.category   = category;
     if (difficulty) filter.difficulty = difficulty;
     if (topic)      filter.topic      = { $regex: topic, $options: 'i' };
+    if (role)       filter.role       = role;
+    if (level)      filter.level      = level;
 
     const pageNum  = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));

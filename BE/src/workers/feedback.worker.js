@@ -44,14 +44,14 @@ feedbackQueue.process('FeedbackJob', 2, async (job) => {
 
   console.log(`[FeedbackJob] Answer ${answerId} graded — score: ${aiResult.overallScore}`);
 
-  // Kiểm tra toàn bộ answers trong session đã có feedback chưa
-  const [submittedAnswers, gradedFeedbacks] = await Promise.all([
+  // Chỉ trigger SessionFeedbackJob khi session đã completed VÀ tất cả answers đã graded
+  const [session, submittedAnswers, gradedFeedbacks] = await Promise.all([
+    InterviewSession.findById(sessionId, 'status'),
     Answer.countDocuments({ session: sessionId, status: 'submitted' }),
     Feedback.countDocuments({ session: sessionId, type: 'answer' }),
   ]);
 
-  if (gradedFeedbacks >= submittedAnswers) {
-    // Tránh enqueue trùng nếu SessionFeedbackJob đã có
+  if (session?.status === 'completed' && gradedFeedbacks >= submittedAnswers) {
     const existing = await Feedback.findOne({ session: sessionId, type: 'session' });
     if (!existing) {
       await feedbackQueue.add(

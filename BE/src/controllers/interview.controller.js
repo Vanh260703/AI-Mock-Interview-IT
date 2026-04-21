@@ -2,23 +2,52 @@ const InterviewSession = require('../models/interview-session.model');
 const Question         = require('../models/question.model');
 const Answer           = require('../models/answer.model');
 const Feedback         = require('../models/feedback.model');
+const { queues }       = require('../config/bull');
+
+const JOB_OPTIONS = {
+  attempts:         3,
+  backoff:          { type: 'exponential', delay: 5000 },
+  removeOnComplete: false,
+  removeOnFail:     false,
+};
+
+// level → difficulty mapping
+const LEVEL_DIFFICULTY = {
+  intern:  'easy',
+  fresher: 'easy',
+  junior:  'medium',
+  middle:  'hard',
+  senior:  'hard',
+};
 
 // POST /api/interviews
-// Body: { type, difficulty, topics, questionCount, timePerQuestion }
+// Body: { type, level, role, topics, questionCount, timePerQuestion, difficulty }
+// level takes priority over difficulty when provided
 exports.createSession = async (req, res, next) => {
   try {
     const {
       type            = 'mixed',
-      difficulty      = 'mixed',
+      level           = null,
+      role            = 'General',
       topics          = [],
       questionCount   = 5,
       timePerQuestion = 120,
+      difficulty: difficultyOverride = 'mixed',
     } = req.body;
+
+    if (!level) {
+      return res.status(400).json({ message: 'level is required!' })
+    }
+
+    // Derive difficulty from level; fallback to explicit difficulty param
+    const difficulty = level ? LEVEL_DIFFICULTY[level] : difficultyOverride;
 
     const filter = { isActive: true };
     if (type === 'technical')  filter.category = 'technical';
     if (type === 'behavioral') filter.category = { $in: ['behavioral', 'hr'] };
-    if (difficulty !== 'mixed') filter.difficulty = difficulty;
+    if (difficulty && difficulty !== 'mixed') filter.difficulty = difficulty;
+    if (role)           filter.role = role;
+    if (level)          filter.level = level;
     if (topics.length > 0) filter.topic = { $in: topics };
 
     const count = Math.min(20, Math.max(1, parseInt(questionCount)));
@@ -38,7 +67,7 @@ exports.createSession = async (req, res, next) => {
       type,
       status: 'in_progress',
       questions: questions.map((q) => q._id),
-      settings: { questionCount: questions.length, difficulty, topics, timePerQuestion },
+      settings: { questionCount: questions.length, difficulty, topics, timePerQuestion, role, level },
       startedAt: new Date(),
     });
 
@@ -120,6 +149,15 @@ exports.submitAnswer = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    // Enqueue AI grading ngay sau khi submit (chỉ với status submitted)
+    if (status === 'submitted') {
+      await queues.feedbackQueue.add(
+        'FeedbackJob',
+        { answerId: answer._id, sessionId: session._id },
+        JOB_OPTIONS
+      );
+    }
+
     res.json({ data: { answer } });
   } catch (err) {
     next(err);
@@ -144,6 +182,21 @@ exports.completeSession = async (req, res, next) => {
       { status: 'completed', completedAt, duration },
       { new: true }
     );
+
+    // Nếu tất cả answers đã được graded trước khi complete → trigger SessionFeedbackJob luôn
+    const [submittedCount, gradedCount, existingSessionFeedback] = await Promise.all([
+      Answer.countDocuments({ session: session._id, status: 'submitted' }),
+      Feedback.countDocuments({ session: session._id, type: 'answer' }),
+      Feedback.findOne({ session: session._id, type: 'session' }),
+    ]);
+
+    if (gradedCount >= submittedCount && submittedCount > 0 && !existingSessionFeedback) {
+      await queues.feedbackQueue.add(
+        'SessionFeedbackJob',
+        { sessionId: session._id },
+        { attempts: 3, backoff: { type: 'exponential', delay: 5000 } }
+      );
+    }
 
     res.json({ data: { session: updatedSession } });
   } catch (err) {
