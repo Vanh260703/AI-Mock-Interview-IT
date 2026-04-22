@@ -38,6 +38,7 @@ exports.getSuggestions = async (req, res, next) => {
     const candidates = await User.find({
       _id:             { $nin: excludeIds },
       isEmailVerified: true,
+      role:            'user',
     })
       .select('username email avatar target careerLevel')
       .limit(60);
@@ -74,6 +75,7 @@ exports.searchUsers = async (req, res, next) => {
     const users = await User.find({
       _id:             { $ne: userId },
       isEmailVerified: true,
+      role:            'user',
       $or: [{ email: regex }, { username: regex }],
     })
       .select('username email avatar target careerLevel')
