@@ -119,7 +119,7 @@ exports.getSession = async (req, res, next) => {
       Feedback.find({ session: session._id }),
     ]);
 
-    res.json({ data: { ...session.toObject(), answers, feedbacks } });
+    res.json({ data: { session: session.toObject(), answers, feedbacks } });
   } catch (err) {
     next(err);
   }
