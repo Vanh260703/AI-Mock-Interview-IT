@@ -75,6 +75,11 @@ exports.getSessionFeedback = async (req, res, next) => {
     const totalAnswers  = await Answer.countDocuments({ session: session._id, status: 'submitted' });
     const gradedAnswers = answerFeedbacks.length;
 
+    // Nếu session đã completed và không có câu nào được submit (tất cả skip)
+    // → coi như hoàn tất, không cần chờ AI
+    const allSkipped   = session.status === 'completed' && totalAnswers === 0;
+    const isComplete   = allSkipped || !!sessionFeedback;
+
     res.json({
       data: {
         session: {
@@ -83,9 +88,10 @@ exports.getSessionFeedback = async (req, res, next) => {
           overallScore: session.overallScore,
         },
         progress: {
-          total:     totalAnswers,
-          graded:    gradedAnswers,
-          isComplete: !!sessionFeedback,
+          total:      totalAnswers,
+          graded:     gradedAnswers,
+          isComplete,
+          allSkipped,
         },
         answerFeedbacks,
         sessionFeedback,

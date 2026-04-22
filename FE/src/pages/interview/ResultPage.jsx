@@ -61,10 +61,11 @@ const ResultPage = () => {
   const navigate = useNavigate();
   const { feedback, isDone } = useFeedbackPolling(id);
 
-  const session = feedback?.session;
-  const sf      = feedback?.sessionFeedback;
-  const answers = feedback?.answerFeedbacks ?? [];
-  const progress= feedback?.progress;
+  const session    = feedback?.session;
+  const sf         = feedback?.sessionFeedback;
+  const answers    = feedback?.answerFeedbacks ?? [];
+  const progress   = feedback?.progress;
+  const allSkipped = progress?.allSkipped ?? false;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -90,6 +91,22 @@ const ResultPage = () => {
       {!isDone ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <GradingProgress progress={progress} />
+        </div>
+      ) : allSkipped ? (
+        <div className="bg-white rounded-xl p-10 shadow-sm border border-gray-100 text-center space-y-4">
+          <p className="text-4xl">😅</p>
+          <p className="text-lg font-semibold text-gray-700">Bạn đã bỏ qua tất cả câu hỏi</p>
+          <p className="text-sm text-gray-400">Không có câu trả lời nào để AI chấm điểm.<br/>Hãy thử lại và trả lời ít nhất một câu nhé!</p>
+          <div className="flex justify-center gap-3 pt-2">
+            <button onClick={() => navigate('/history')}
+              className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:border-gray-300 rounded-xl text-sm font-medium transition-colors">
+              Xem lịch sử
+            </button>
+            <button onClick={() => navigate('/interview/setup')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-xl text-sm transition-colors">
+              <RotateCcw size={15} /> Phỏng vấn lại
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
