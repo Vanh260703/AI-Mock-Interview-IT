@@ -34,6 +34,18 @@ const calcStreak = (sortedDateStrings) => {
   return streak;
 };
 
+// ─── GET /api/users/me ────────────────────────────────────────────────────────
+exports.getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+    if (!user) return res.status(404).json({ message: 'User không tồn tại' });
+    res.json({ data: { user } });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ─── GET /api/users/me/stats ───────────────────────────────────────────────────
 exports.getMyStats = async (req, res, next) => {
   try {

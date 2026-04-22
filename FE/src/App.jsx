@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import axios from 'axios';
 import { useAuthStore } from './store/auth.store.js';
 import { setAuthHandlers } from './api/axios.js';
+import { userApi } from './api/user.api.js';
 
 // Layouts
 import AuthLayout    from './components/layout/AuthLayout.jsx';
@@ -44,20 +45,22 @@ const App = () => {
 
   // Try to restore session via refresh token on mount
   useEffect(() => {
-    axios.post('/api/auth/refresh-token', {}, { withCredentials: true })
-      .then((res) => {
-        // Fetch user info — if refresh works, we have an access token
-        // We store the token; user info comes from the token payload or we keep it minimal
-        const { accessToken } = res.data;
-        // Decode minimal user info from JWT payload (non-sensitive)
-        try {
-          const payload = JSON.parse(atob(accessToken.split('.')[1]));
-          setSession({ id: payload.id, role: payload.role }, accessToken);
-        } catch {
-          setInitialized();
-        }
-      })
-      .catch(() => setInitialized());
+    const restore = async () => {
+      try {
+        const refreshRes = await axios.post('/api/auth/refresh-token', {}, { withCredentials: true });
+        const { accessToken } = refreshRes.data;
+
+        // Wire token vào store trước để userApi có thể dùng
+        useAuthStore.getState().setToken(accessToken);
+
+        // Lấy full user profile
+        const userRes = await userApi.getMe();
+        setSession(userRes.data.data.user, accessToken);
+      } catch {
+        setInitialized();
+      }
+    };
+    restore();
   }, []);
 
   return (
