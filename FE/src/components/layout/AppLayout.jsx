@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   BrainCircuit, LayoutDashboard, Play, History,
-  BookOpen, User, LogOut, ChevronRight, Shield,
+  BookOpen, User, LogOut, Shield, Users,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store.js';
 import { authApi } from '../../api/auth.api.js';
@@ -9,11 +9,12 @@ import toast from 'react-hot-toast';
 import { TARGET_OPTIONS } from '../../lib/constants.js';
 
 const NAV = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/interview/setup', icon: Play, label: 'Phỏng vấn mới' },
-  { to: '/history', icon: History, label: 'Lịch sử' },
-  { to: '/questions', icon: BookOpen, label: 'Ngân hàng câu hỏi' },
-  { to: '/profile', icon: User, label: 'Hồ sơ' },
+  { to: '/dashboard',      icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/interview/setup', icon: Play,            label: 'Phỏng vấn mới' },
+  { to: '/history',        icon: History,          label: 'Lịch sử' },
+  { to: '/questions',      icon: BookOpen,         label: 'Ngân hàng câu hỏi' },
+  { to: '/community',      icon: Users,            label: 'Cộng đồng' },
+  { to: '/profile',        icon: User,             label: 'Hồ sơ' },
 ];
 
 const AppLayout = () => {

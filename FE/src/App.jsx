@@ -27,6 +27,7 @@ import HistoryPage       from './pages/history/HistoryPage.jsx';
 import HistoryDetailPage from './pages/history/HistoryDetailPage.jsx';
 import ProfilePage       from './pages/profile/ProfilePage.jsx';
 import QuestionBankPage  from './pages/questions/QuestionBankPage.jsx';
+import FriendsPage       from './pages/friends/FriendsPage.jsx';
 
 // Admin pages
 import AdminUsersPage  from './pages/admin/AdminUsersPage.jsx';
@@ -96,6 +97,7 @@ const App = () => {
             <Route path="/history/:id"             element={<HistoryDetailPage />} />
             <Route path="/profile"                 element={<ProfilePage />} />
             <Route path="/questions"               element={<QuestionBankPage />} />
+            <Route path="/community"               element={<FriendsPage />} />
           </Route>
           {/* Session page — full screen, no sidebar */}
           <Route path="/interview/:id"             element={<SessionPage />} />

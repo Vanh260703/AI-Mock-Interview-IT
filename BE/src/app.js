@@ -14,6 +14,7 @@ const aiRouter         = require('./routes/ai.route');
 const interviewRouter  = require('./routes/interview.route');
 const feedbackRouter   = require('./routes/feedback.route');
 const userRouter       = require('./routes/user.route');
+const socialRouter     = require('./routes/social.route');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/ai',         aiRouter);
 app.use('/api/interviews', interviewRouter);
 app.use('/api/feedback',   feedbackRouter);
 app.use('/api/users',      userRouter);
+app.use('/api/social',     socialRouter);
 
 // 404 handler
 app.use((req, res) => {
