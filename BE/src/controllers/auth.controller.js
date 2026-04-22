@@ -101,7 +101,7 @@ exports.verifyEmail = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired verification link' });
+      return res.redirect(`${process.env.CLIENT_URL}/verify-success?error=invalid`);
     }
 
     user.isEmailVerified = true;
@@ -109,7 +109,10 @@ exports.verifyEmail = async (req, res, next) => {
     user.emailVerificationExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
-    return res.redirect(`${process.env.CLIENT_URL}/login?verified=true`);
+    // Issue session ngay sau khi verify → auto login
+    const { accessToken } = await issueSession(res, user);
+
+    return res.redirect(`${process.env.CLIENT_URL}/verify-success?token=${accessToken}`);
   } catch (err) {
     next(err);
   }

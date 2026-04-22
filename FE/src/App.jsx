@@ -14,8 +14,9 @@ import ProtectedRoute from './components/layout/ProtectedRoute.jsx';
 // Auth pages
 import LoginPage         from './pages/auth/LoginPage.jsx';
 import RegisterPage      from './pages/auth/RegisterPage.jsx';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage.jsx';
-import ResetPasswordPage  from './pages/auth/ResetPasswordPage.jsx';
+import ForgotPasswordPage  from './pages/auth/ForgotPasswordPage.jsx';
+import ResetPasswordPage   from './pages/auth/ResetPasswordPage.jsx';
+import VerifySuccessPage   from './pages/auth/VerifySuccessPage.jsx';
 
 // App pages
 import DashboardPage     from './pages/dashboard/DashboardPage.jsx';
@@ -73,6 +74,9 @@ const App = () => {
         }}
       />
       <Routes>
+        {/* Email verify auto-login — standalone, no layout */}
+        <Route path="/verify-success" element={<VerifySuccessPage />} />
+
         {/* Public auth routes */}
         <Route element={<AuthLayout />}>
           <Route path="/login"                   element={<LoginPage />} />
