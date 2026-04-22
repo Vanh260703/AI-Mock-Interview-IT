@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Play, ChevronRight, Trophy, UserPlus, Search, Check, Loader2 } from 'lucide-react';
+import { Play, ChevronRight, Trophy, UserPlus, Check, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { userApi } from '../../api/user.api.js';
 import { interviewApi } from '../../api/interview.api.js';
@@ -98,102 +98,47 @@ const SuggestionsWidget = () => {
   );
 };
 
-// ─── Widget: Tìm bạn bè ───────────────────────────────────────────────────────
-const SearchFriendWidget = () => {
-  const [q, setQ]             = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [relations, setRelations] = useState({});
-  const debounceRef = useRef(null);
+// ─── Widget: Bạn bè của tôi ───────────────────────────────────────────────────
+const MyFriendsWidget = () => {
+  const [friends, setFriends] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const doSearch = async (val) => {
-    if (val.trim().length < 2) { setResults([]); return; }
-    setLoading(true);
-    try {
-      const res = await socialApi.searchUsers(val.trim());
-      const data = res.data.data.slice(0, 5);
-      setResults(data);
-      const rel = {};
-      data.forEach((u) => { rel[u._id] = { relation: u.relation, requestId: u.requestId }; });
-      setRelations(rel);
-    } catch {
-    } finally { setLoading(false); }
-  };
-
-  const handleChange = (e) => {
-    const val = e.target.value;
-    setQ(val);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(val), 400);
-  };
-
-  const handleSend = async (toId) => {
-    try {
-      await socialApi.sendRequest(toId);
-      setRelations((r) => ({ ...r, [toId]: { relation: 'sent' } }));
-      toast.success('Đã gửi lời mời!');
-    } catch (err) { toast.error(err.response?.data?.message ?? 'Gửi thất bại'); }
-  };
-
-  const handleAccept = async (toId, requestId) => {
-    try {
-      await socialApi.acceptRequest(requestId);
-      setRelations((r) => ({ ...r, [toId]: { relation: 'friend' } }));
-      toast.success('Đã chấp nhận!');
-    } catch (err) { toast.error(err.response?.data?.message ?? 'Thao tác thất bại'); }
-  };
-
-  const renderAction = (u) => {
-    const rel = relations[u._id]?.relation ?? 'none';
-    const rid = relations[u._id]?.requestId;
-    if (rel === 'friend')   return <span className="text-xs text-green-600 font-medium shrink-0">Bạn bè</span>;
-    if (rel === 'sent')     return <span className="text-xs text-gray-400 shrink-0">Đã gửi</span>;
-    if (rel === 'received') return (
-      <button onClick={() => handleAccept(u._id, rid)}
-        className="shrink-0 px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors">
-        Chấp nhận
-      </button>
-    );
-    return (
-      <button onClick={() => handleSend(u._id)}
-        className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium rounded-lg transition-colors">
-        <UserPlus size={12} /> Kết bạn
-      </button>
-    );
-  };
+  useEffect(() => {
+    socialApi.getFriends()
+      .then((res) => setFriends(res.data.data.slice(0, 5)))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-gray-800">Tìm bạn bè</h2>
-        <Link to="/community?tab=search" className="text-xs text-violet-600 hover:underline flex items-center gap-1">
-          Tìm nâng cao <ChevronRight size={12} />
+        <h2 className="text-base font-semibold text-gray-800">Bạn bè của tôi</h2>
+        <Link to="/community" className="text-xs text-violet-600 hover:underline flex items-center gap-1">
+          Xem tất cả <ChevronRight size={12} />
         </Link>
       </div>
 
-      {/* Search input */}
-      <div className="relative mb-3">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={q} onChange={handleChange}
-          placeholder="Nhập email hoặc username..."
-          className="w-full pl-8 pr-8 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm"
-        />
-        {loading && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
-      </div>
-
-      {/* Results */}
-      {q.length >= 2 && !loading && results.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-4">Không tìm thấy người dùng nào</p>
-      )}
-      {results.length > 0 && (
+      {loading ? (
+        <div className="space-y-2">
+          {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-50 rounded-xl animate-pulse" />)}
+        </div>
+      ) : friends.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-6">
+          Chưa có bạn bè nào.{' '}
+          <Link to="/community" className="text-violet-600 hover:underline">Tìm bạn ngay!</Link>
+        </p>
+      ) : (
         <div className="divide-y divide-gray-50">
-          {results.map((u) => (
-            <MiniUserCard key={u._id} user={u} action={renderAction(u)} />
+          {friends.map((u) => (
+            <MiniUserCard key={u._id} user={u} action={
+              <Link to="/community"
+                className="text-xs text-violet-500 hover:text-violet-700 font-medium shrink-0">
+                Nhắn tin
+              </Link>
+            } />
           ))}
         </div>
-      )}
-      {q.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-4">Nhập email hoặc username để tìm kiếm</p>
       )}
     </div>
   );
@@ -279,7 +224,7 @@ const DashboardPage = () => {
       {/* Social — 2 cols */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SuggestionsWidget />
-        <SearchFriendWidget />
+        <MyFriendsWidget />
       </div>
 
       {/* Recent sessions */}
