@@ -47,7 +47,7 @@ async function issueSession(res, user) {
 // POST /api/auth/register
 exports.register = async (req, res, next) => {
   try {
-    const { email, password, gender, avatar } = req.body;
+    const { email, password, gender, avatar, target, careerLevel } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
@@ -71,6 +71,8 @@ exports.register = async (req, res, next) => {
       password,
       gender,
       avatar,
+      target:      target      ?? null,
+      careerLevel: careerLevel ?? null,
       emailVerificationToken: hashToken(rawToken),
       emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });

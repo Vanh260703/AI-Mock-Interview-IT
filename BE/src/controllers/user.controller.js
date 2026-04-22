@@ -187,21 +187,30 @@ exports.getMyProgress = async (req, res, next) => {
 // Cập nhật thông tin cá nhân: username, gender
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { username, gender } = req.body;
-    const allowed = ['male', 'female', 'other'];
+    const { username, gender, target, careerLevel } = req.body;
+    const allowedGender      = ['male', 'female', 'other'];
+    const allowedTarget      = ['FE', 'BE', 'FS', 'DevOps', 'Mobile', 'Data', 'Security', 'other'];
+    const allowedCareerLevel = ['intern', 'fresher', 'junior', 'middle', 'senior'];
 
     const update = {};
     if (username !== undefined) {
       const trimmed = username.trim();
       if (!trimmed) return res.status(400).json({ message: 'Username không được để trống' });
-      // Kiểm tra trùng username (bỏ qua chính mình)
       const exists = await User.findOne({ username: trimmed, _id: { $ne: req.user._id } });
       if (exists) return res.status(409).json({ message: 'Username đã được sử dụng' });
       update.username = trimmed;
     }
     if (gender !== undefined) {
-      if (!allowed.includes(gender)) return res.status(400).json({ message: 'gender không hợp lệ' });
+      if (!allowedGender.includes(gender)) return res.status(400).json({ message: 'gender không hợp lệ' });
       update.gender = gender;
+    }
+    if (target !== undefined) {
+      if (target !== null && !allowedTarget.includes(target)) return res.status(400).json({ message: 'target không hợp lệ' });
+      update.target = target;
+    }
+    if (careerLevel !== undefined) {
+      if (careerLevel !== null && !allowedCareerLevel.includes(careerLevel)) return res.status(400).json({ message: 'careerLevel không hợp lệ' });
+      update.careerLevel = careerLevel;
     }
 
     if (Object.keys(update).length === 0) {

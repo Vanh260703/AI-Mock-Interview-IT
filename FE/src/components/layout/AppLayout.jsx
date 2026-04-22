@@ -6,6 +6,7 @@ import {
 import { useAuthStore } from '../../store/auth.store.js';
 import { authApi } from '../../api/auth.api.js';
 import toast from 'react-hot-toast';
+import { TARGET_OPTIONS } from '../../lib/constants.js';
 
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -89,7 +90,12 @@ const AppLayout = () => {
             )}
             <div className="min-w-0 flex-1">
               <p className="text-white text-sm font-medium truncate">{user?.username ?? user?.email}</p>
-              <p className="text-slate-500 text-xs truncate">{user?.email}</p>
+              {(() => {
+                const t = TARGET_OPTIONS.find((o) => o.value === user?.target);
+                return t
+                  ? <p className="text-slate-400 text-xs truncate">{t.emoji} {t.label}</p>
+                  : <p className="text-slate-500 text-xs truncate">{user?.email}</p>;
+              })()}
             </div>
           </div>
           <button

@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
-import { User, Mail, Shield, Camera, Pencil, Check, X, Loader2 } from 'lucide-react';
+import { User, Mail, Shield, Camera, Pencil, Check, X, Loader2, Target, BarChart2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/auth.store.js';
 import { userApi } from '../../api/user.api.js';
 import StatsGrid from '../../components/dashboard/StatsGrid.jsx';
 import ProgressChart from '../../components/dashboard/ProgressChart.jsx';
+import { TARGET_OPTIONS, CAREER_LEVEL_OPTIONS } from '../../lib/constants.js';
 
 // ─── Avatar Upload ─────────────────────────────────────────────────────────────
 const AvatarSection = ({ user, onAvatarUpdated }) => {
@@ -96,21 +97,22 @@ const AvatarSection = ({ user, onAvatarUpdated }) => {
 
 // ─── Edit Profile Form ─────────────────────────────────────────────────────────
 const EditProfileForm = ({ user, onSaved, onCancel }) => {
-  const [username, setUsername] = useState(user?.username ?? '');
-  const [gender, setGender]     = useState(user?.gender ?? 'other');
-  const [saving, setSaving]     = useState(false);
+  const [username,    setUsername]    = useState(user?.username    ?? '');
+  const [gender,      setGender]      = useState(user?.gender      ?? 'other');
+  const [target,      setTarget]      = useState(user?.target      ?? null);
+  const [careerLevel, setCareerLevel] = useState(user?.careerLevel ?? null);
+  const [saving,      setSaving]      = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const payload = {};
-      if (username.trim() !== (user?.username ?? '')) payload.username = username.trim();
-      if (gender !== user?.gender) payload.gender = gender;
+      if (username.trim() !== (user?.username    ?? ''))   payload.username    = username.trim();
+      if (gender      !== user?.gender)                    payload.gender      = gender;
+      if (target      !== (user?.target      ?? null))     payload.target      = target;
+      if (careerLevel !== (user?.careerLevel ?? null))     payload.careerLevel = careerLevel;
 
-      if (!Object.keys(payload).length) {
-        onCancel();
-        return;
-      }
+      if (!Object.keys(payload).length) { onCancel(); return; }
 
       const res = await userApi.updateProfile(payload);
       onSaved(res.data.data.user);
@@ -141,17 +143,48 @@ const EditProfileForm = ({ user, onSaved, onCancel }) => {
         <label className="block text-xs font-medium text-gray-500 mb-1">Giới tính</label>
         <div className="flex gap-2">
           {[{ v: 'male', l: 'Nam' }, { v: 'female', l: 'Nữ' }, { v: 'other', l: 'Khác' }].map(({ v, l }) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setGender(v)}
+            <button key={v} type="button" onClick={() => setGender(v)}
               className={`flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
-                gender === v
+                gender === v ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-gray-100 text-gray-500 hover:border-gray-300'
+              }`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Target */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">Định hướng</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {TARGET_OPTIONS.map(({ value, label, emoji }) => (
+            <button key={value} type="button"
+              onClick={() => setTarget(target === value ? null : value)}
+              className={`flex flex-col items-center gap-0.5 py-2 rounded-xl border-2 text-xs font-medium transition-colors ${
+                target === value
+                  ? 'border-violet-500 bg-violet-50 text-violet-700'
+                  : 'border-gray-100 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+              }`}>
+              <span className="text-base leading-none">{emoji}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Career Level */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">Level</label>
+        <div className="flex gap-1.5">
+          {CAREER_LEVEL_OPTIONS.map(({ value, label }) => (
+            <button key={value} type="button"
+              onClick={() => setCareerLevel(careerLevel === value ? null : value)}
+              className={`flex-1 py-2 rounded-xl text-xs font-medium border-2 transition-colors ${
+                careerLevel === value
                   ? 'border-violet-500 bg-violet-50 text-violet-700'
                   : 'border-gray-100 text-gray-500 hover:border-gray-300'
-              }`}
-            >
-              {l}
+              }`}>
+              {label}
             </button>
           ))}
         </div>
@@ -159,19 +192,13 @@ const EditProfileForm = ({ user, onSaved, onCancel }) => {
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm transition-colors"
-        >
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm transition-colors">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
           Lưu
         </button>
-        <button
-          onClick={onCancel}
-          disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 text-gray-600 hover:border-gray-300 rounded-xl text-sm transition-colors"
-        >
+        <button onClick={onCancel} disabled={saving}
+          className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 text-gray-600 hover:border-gray-300 rounded-xl text-sm transition-colors">
           <X size={14} /> Huỷ
         </button>
       </div>
@@ -180,35 +207,55 @@ const EditProfileForm = ({ user, onSaved, onCancel }) => {
 };
 
 // ─── Profile Info (view mode) ─────────────────────────────────────────────────
-const ProfileInfo = ({ user, onEdit }) => (
-  <div className="flex-1 space-y-2">
-    <div className="flex items-center gap-2">
-      <User size={15} className="text-gray-400 shrink-0" />
-      <span className="text-sm font-medium text-gray-800">{user?.username ?? <span className="text-gray-400 italic">Chưa đặt username</span>}</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <Mail size={15} className="text-gray-400 shrink-0" />
-      <span className="text-sm text-gray-600">{user?.email}</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <Shield size={15} className="text-gray-400 shrink-0" />
-      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-        user?.role === 'admin' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600'
-      }`}>{user?.role}</span>
-      {user?.gender && user.gender !== 'other' && (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 capitalize">
-          {user.gender === 'male' ? 'Nam' : 'Nữ'}
+const ProfileInfo = ({ user, onEdit }) => {
+  const targetInfo = TARGET_OPTIONS.find((t) => t.value === user?.target);
+  const levelInfo  = CAREER_LEVEL_OPTIONS.find((l) => l.value === user?.careerLevel);
+
+  return (
+    <div className="flex-1 space-y-2">
+      <div className="flex items-center gap-2">
+        <User size={15} className="text-gray-400 shrink-0" />
+        <span className="text-sm font-medium text-gray-800">
+          {user?.username ?? <span className="text-gray-400 italic">Chưa đặt username</span>}
         </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Mail size={15} className="text-gray-400 shrink-0" />
+        <span className="text-sm text-gray-600">{user?.email}</span>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Shield size={15} className="text-gray-400 shrink-0" />
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+          user?.role === 'admin' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600'
+        }`}>{user?.role}</span>
+        {user?.gender && user.gender !== 'other' && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+            {user.gender === 'male' ? 'Nam' : 'Nữ'}
+          </span>
+        )}
+      </div>
+      {(targetInfo || levelInfo) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Target size={15} className="text-gray-400 shrink-0" />
+          {targetInfo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
+              {targetInfo.emoji} {targetInfo.label}
+            </span>
+          )}
+          {levelInfo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 font-medium">
+              {levelInfo.label}
+            </span>
+          )}
+        </div>
       )}
+      <button onClick={onEdit}
+        className="mt-2 flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 font-medium">
+        <Pencil size={13} /> Chỉnh sửa thông tin
+      </button>
     </div>
-    <button
-      onClick={onEdit}
-      className="mt-2 flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 font-medium"
-    >
-      <Pencil size={13} /> Chỉnh sửa thông tin
-    </button>
-  </div>
-);
+  );
+};
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const ProfilePage = () => {

@@ -34,6 +34,16 @@ const userSchema = new mongoose.Schema(
       enum: ['male', 'female', 'other'],
       default: 'other',
     },
+    target: {
+      type: String,
+      enum: ['FE', 'BE', 'FS', 'DevOps', 'Mobile', 'Data', 'Security', 'other'],
+      default: null,
+    },
+    careerLevel: {
+      type: String,
+      enum: ['intern', 'fresher', 'junior', 'middle', 'senior'],
+      default: null,
+    },
     avatar: {
       type: String,
       default: 'https://www.vecteezy.com/free-vector/default-avatar',

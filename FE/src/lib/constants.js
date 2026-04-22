@@ -1,3 +1,22 @@
+export const TARGET_OPTIONS = [
+  { value: 'FE',       label: 'Frontend',   emoji: '🎨' },
+  { value: 'BE',       label: 'Backend',    emoji: '⚙️' },
+  { value: 'FS',       label: 'Fullstack',  emoji: '🔄' },
+  { value: 'DevOps',   label: 'DevOps',     emoji: '🚀' },
+  { value: 'Mobile',   label: 'Mobile',     emoji: '📱' },
+  { value: 'Data',     label: 'Data / AI',  emoji: '📊' },
+  { value: 'Security', label: 'Security',   emoji: '🔐' },
+  { value: 'other',    label: 'Khác',       emoji: '💼' },
+];
+
+export const CAREER_LEVEL_OPTIONS = [
+  { value: 'intern',  label: 'Intern'  },
+  { value: 'fresher', label: 'Fresher' },
+  { value: 'junior',  label: 'Junior'  },
+  { value: 'middle',  label: 'Middle'  },
+  { value: 'senior',  label: 'Senior'  },
+];
+
 export const LEVEL_MAP = {
   intern:  { label: 'Intern',  difficulty: 'Easy',   color: 'bg-green-100 text-green-700' },
   fresher: { label: 'Fresher', difficulty: 'Easy',   color: 'bg-green-100 text-green-700' },
