@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, Code2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { interviewApi } from '../../api/interview.api.js';
 import MetricsRadar from '../../components/feedback/MetricsRadar.jsx';
+import MarkdownContent from '../../components/ui/MarkdownContent.jsx';
 import { Badge } from '../../components/ui/Badge.jsx';
 import { PageLoader } from '../../components/ui/LoadingSpinner.jsx';
 import { STATUS_MAP, LEVEL_MAP, scoreColor, scoreBg, formatDate, formatDuration } from '../../lib/constants.js';
@@ -63,10 +64,10 @@ const AnswerItem = ({ answer, feedback, question, index }) => {
             )}
           </div>
 
-          {/* Question text */}
+          {/* Question preview — strip markdown for collapsed view */}
           {question?.content && (
             <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
-              {question.content.split('\n')[0]}
+              {question.content.replace(/[*_`#]/g, '').split('\n').find(l => l.trim()) ?? ''}
             </p>
           )}
 
@@ -94,9 +95,9 @@ const AnswerItem = ({ answer, feedback, question, index }) => {
           {question?.content && (
             <div>
               <p className="text-xs font-semibold text-gray-500 mb-1.5">Câu hỏi</p>
-              <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3">
-                {question.content.split('\n')[0]}
-              </p>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                <MarkdownContent theme="light">{question.content}</MarkdownContent>
+              </div>
             </div>
           )}
 

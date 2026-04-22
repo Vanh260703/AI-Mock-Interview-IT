@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useFeedbackPolling } from '../../hooks/useFeedbackPolling.js';
 import GradingProgress from '../../components/feedback/GradingProgress.jsx';
 import MetricsRadar from '../../components/feedback/MetricsRadar.jsx';
-import { scoreColor, scoreBg, LEVEL_MAP } from '../../lib/constants.js';
+import MarkdownContent from '../../components/ui/MarkdownContent.jsx';
+import { scoreColor, scoreBg } from '../../lib/constants.js';
 
 // Render code answer với syntax highlight đơn giản
 const CodeAnswer = ({ code }) => (
@@ -56,10 +57,10 @@ const AnswerFeedbackCard = ({ feedback, index }) => {
             )}
           </div>
 
-          {/* Question text */}
+          {/* Question preview — first line only when collapsed */}
           {question?.content && (
             <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
-              {question.content.split('\n')[0]}
+              {question.content.replace(/[*_`#]/g, '').split('\n').find(l => l.trim()) ?? ''}
             </p>
           )}
 
@@ -82,13 +83,23 @@ const AnswerFeedbackCard = ({ feedback, index }) => {
 
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3">
+          {/* Full question */}
+          {question?.content && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-1.5">Câu hỏi</p>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                <MarkdownContent theme="light">{question.content}</MarkdownContent>
+              </div>
+            </div>
+          )}
+
           {/* Full answer */}
           {answerContent && (
             <div>
               <p className="text-xs font-semibold text-gray-500 mb-1">Câu trả lời của bạn</p>
               {isCoding
                 ? <CodeAnswer code={answerContent} />
-                : <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 leading-relaxed">{answerContent}</p>
+                : <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 leading-relaxed whitespace-pre-wrap">{answerContent}</p>
               }
             </div>
           )}

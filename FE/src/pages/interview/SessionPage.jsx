@@ -6,55 +6,9 @@ import { interviewApi } from '../../api/interview.api.js';
 import CountdownTimer from '../../components/interview/CountdownTimer.jsx';
 import AnswerRecorder from '../../components/interview/AnswerRecorder.jsx';
 import CodeEditor from '../../components/interview/CodeEditor.jsx';
+import MarkdownContent from '../../components/ui/MarkdownContent.jsx';
 import { LEVEL_MAP } from '../../lib/constants.js';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner.jsx';
-
-// Render question content — supports fenced code blocks (```lang\n...\n```)
-const QuestionContent = ({ text }) => {
-  if (!text) return null;
-
-  const parts = [];
-  const codeBlockRe = /```(\w*)\n([\s\S]*?)```/g;
-  let last = 0;
-  let match;
-
-  while ((match = codeBlockRe.exec(text)) !== null) {
-    if (match.index > last) {
-      parts.push({ type: 'text', content: text.slice(last, match.index) });
-    }
-    parts.push({ type: 'code', lang: match[1] || 'text', content: match[2] });
-    last = match.index + match[0].length;
-  }
-  if (last < text.length) {
-    parts.push({ type: 'text', content: text.slice(last) });
-  }
-
-  return (
-    <div className="space-y-3">
-      {parts.map((part, i) =>
-        part.type === 'code' ? (
-          <div key={i} className="rounded-lg overflow-hidden border border-gray-700">
-            {part.lang && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1e1e1e] border-b border-gray-700">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-                <span className="ml-2 text-xs text-gray-400 font-mono">{part.lang}</span>
-              </div>
-            )}
-            <pre className="bg-[#1e1e1e] text-gray-200 text-sm font-mono px-4 py-3 overflow-x-auto leading-relaxed">
-              <code>{part.content}</code>
-            </pre>
-          </div>
-        ) : (
-          <p key={i} className="text-gray-900 leading-relaxed whitespace-pre-wrap">
-            {part.content}
-          </p>
-        )
-      )}
-    </div>
-  );
-};
 
 const SessionPage = () => {
   const { id } = useParams();
@@ -218,9 +172,9 @@ const SessionPage = () => {
               ))}
             </div>
 
-            <h2 className="text-lg font-semibold text-white mb-4 leading-relaxed">
-              {currentQ?.content}
-            </h2>
+            <div className="mb-4">
+              <MarkdownContent theme="dark">{currentQ?.content ?? ''}</MarkdownContent>
+            </div>
 
             {currentQ?.topic && (
               <p className="mt-2 text-xs text-gray-500">Chủ đề: {currentQ.topic}</p>
@@ -259,8 +213,8 @@ const SessionPage = () => {
                 }`}>{currentQ.difficulty}</span>
               )}
             </div>
-            <div className="text-xl font-medium text-gray-900 leading-relaxed">
-              <QuestionContent text={currentQ?.content} />
+            <div className="text-base leading-relaxed">
+              <MarkdownContent theme="light">{currentQ?.content ?? ''}</MarkdownContent>
             </div>
             {currentQ?.topic && (
               <p className="mt-4 text-xs text-gray-400">Chủ đề: {currentQ.topic}</p>
