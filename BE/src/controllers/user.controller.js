@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const InterviewSession = require('../models/interview-session.model');
 const Answer           = require('../models/answer.model');
+const User             = require('../models/user.model');
 
 // ─── Helper: tính streak (ngày liên tiếp có session) ──────────────────────────
 const calcStreak = (sortedDateStrings) => {
@@ -165,6 +166,60 @@ exports.getMyProgress = async (req, res, next) => {
         progress, // mảng { date, avgScore, bestScore, sessionCount }
       },
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── PATCH /api/users/me ───────────────────────────────────────────────────────
+// Cập nhật thông tin cá nhân: username, gender
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { username, gender } = req.body;
+    const allowed = ['male', 'female', 'other'];
+
+    const update = {};
+    if (username !== undefined) {
+      const trimmed = username.trim();
+      if (!trimmed) return res.status(400).json({ message: 'Username không được để trống' });
+      // Kiểm tra trùng username (bỏ qua chính mình)
+      const exists = await User.findOne({ username: trimmed, _id: { $ne: req.user._id } });
+      if (exists) return res.status(409).json({ message: 'Username đã được sử dụng' });
+      update.username = trimmed;
+    }
+    if (gender !== undefined) {
+      if (!allowed.includes(gender)) return res.status(400).json({ message: 'gender không hợp lệ' });
+      update.gender = gender;
+    }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ message: 'Không có thông tin nào để cập nhật' });
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true })
+      .select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+
+    res.json({ data: { user } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── PATCH /api/users/me/avatar ───────────────────────────────────────────────
+// Upload ảnh đại diện lên Cloudinary, lưu URL vào DB
+exports.updateAvatar = async (req, res, next) => {
+  try {
+    if (!req.avatarUrl) {
+      return res.status(400).json({ message: 'Vui lòng chọn file ảnh' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar: req.avatarUrl },
+      { new: true }
+    ).select('avatar email username');
+
+    res.json({ data: { avatarUrl: user.avatar, user } });
   } catch (err) {
     next(err);
   }

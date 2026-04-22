@@ -16,6 +16,19 @@ const multerUpload = multer({
   },
 });
 
+// Chỉ nhận image, giới hạn 5MB
+const multerImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
+
 /**
  * Upload buffer lên Cloudinary
  * @param {Buffer} buffer
@@ -64,4 +77,26 @@ const uploadMedia = [
   },
 ];
 
-module.exports = { uploadMedia };
+/**
+ * Middleware: parse 1 file field "avatar" + upload lên Cloudinary
+ * Gắn req.avatarUrl sau khi upload xong
+ */
+const uploadAvatar = [
+  multerImage.single('avatar'),
+  async (req, res, next) => {
+    if (!req.file) return next();
+    try {
+      const result = await uploadToCloudinary(req.file.buffer, {
+        folder:         'ai-mock-interview/avatars',
+        resource_type:  'image',
+        transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
+      });
+      req.avatarUrl = result.secure_url;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  },
+];
+
+module.exports = { uploadMedia, uploadAvatar };
