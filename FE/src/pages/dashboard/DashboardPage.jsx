@@ -102,6 +102,7 @@ const SuggestionsWidget = () => {
 const MyFriendsWidget = () => {
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     socialApi.getFriends()
@@ -132,10 +133,11 @@ const MyFriendsWidget = () => {
         <div className="divide-y divide-gray-50">
           {friends.map((u) => (
             <MiniUserCard key={u._id} user={u} action={
-              <Link to="/community"
+              <button
+                onClick={() => navigate('/messages', { state: { toId: u._id } })}
                 className="text-xs text-violet-500 hover:text-violet-700 font-medium shrink-0">
                 Nhắn tin
-              </Link>
+              </button>
             } />
           ))}
         </div>

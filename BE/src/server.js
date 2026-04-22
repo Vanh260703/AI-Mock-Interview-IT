@@ -1,7 +1,9 @@
 require('dotenv').config();
+const http = require('http');
 const app = require('./app');
 const connectDB = require('./config/database');
 const { connectRedis } = require('./config/redis');
+const { initSocket }   = require('./config/socket');
 const seedAdmin = require('./seeders/admin.seeder');
 const seedQuestions = require('./seeders/question.seeder');
 require('./config/bull'); // initialize queues
@@ -17,7 +19,10 @@ const start = async () => {
 
     require('./workers/feedback.worker'); // khởi động Bull workers
 
-    app.listen(PORT, () => {
+    const httpServer = http.createServer(app);
+    await initSocket(httpServer);
+
+    httpServer.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   } catch (err) {

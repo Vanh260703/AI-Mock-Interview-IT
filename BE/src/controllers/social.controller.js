@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 const User          = require('../models/user.model');
 const FriendRequest = require('../models/friend-request.model');
 
+// Emit socket event an toàn (không crash nếu socket chưa init)
+const emit = (room, event, data) => {
+  try {
+    const { getIO } = require('../config/socket');
+    getIO().to(room).emit(event, data);
+  } catch {}
+};
+
 // ─── Helper: lấy tập các userId liên quan đến current user ─────────────────────
 const getRelatedIds = async (userId) => {
   const requests = await FriendRequest.find({
@@ -123,8 +131,14 @@ exports.sendRequest = async (req, res, next) => {
       return res.status(400).json({ message: 'Không thể tự gửi lời mời cho bản thân' });
     }
 
-    const target = await User.findById(toId);
+    const [target, fromUser] = await Promise.all([
+      User.findById(toId).select('username email avatar target careerLevel'),
+      User.findById(fromId).select('username email avatar target careerLevel'),
+    ]);
     if (!target) return res.status(404).json({ message: 'Người dùng không tồn tại' });
+
+    const fromPayload = { _id: fromUser._id, username: fromUser.username, email: fromUser.email, avatar: fromUser.avatar, target: fromUser.target, careerLevel: fromUser.careerLevel };
+    const toPayload   = { _id: target._id,   username: target.username,   email: target.email,   avatar: target.avatar,   target: target.target,   careerLevel: target.careerLevel };
 
     // Kiểm tra chiều ngược lại — nếu họ đã gửi cho mình thì tự động accept
     const reverse = await FriendRequest.findOne({ from: toId, to: fromId });
@@ -135,6 +149,9 @@ exports.sendRequest = async (req, res, next) => {
       if (reverse.status === 'pending') {
         reverse.status = 'accepted';
         await reverse.save();
+        // Thông báo cả 2 đã là bạn
+        emit(`user_${toId}`,   'friend:accepted', { by: fromPayload, requestId: reverse._id });
+        emit(`user_${fromId}`, 'friend:accepted', { by: toPayload,   requestId: reverse._id });
         return res.json({ data: reverse, message: 'Đã chấp nhận lời mời kết bạn' });
       }
     }
@@ -143,13 +160,15 @@ exports.sendRequest = async (req, res, next) => {
     if (existing) {
       if (existing.status === 'accepted') return res.status(409).json({ message: 'Hai người đã là bạn bè' });
       if (existing.status === 'pending')  return res.status(409).json({ message: 'Đã gửi lời mời, đang chờ phản hồi' });
-      // rejected → cho gửi lại
       existing.status = 'pending';
       await existing.save();
+      emit(`user_${toId}`, 'friend:request', { requestId: existing._id, from: fromPayload });
       return res.json({ data: existing });
     }
 
     const request = await FriendRequest.create({ from: fromId, to: toId });
+    // Notify người nhận có lời mời mới
+    emit(`user_${toId}`, 'friend:request', { requestId: request._id, from: fromPayload });
     res.status(201).json({ data: request });
   } catch (err) {
     next(err);
@@ -186,6 +205,13 @@ exports.acceptRequest = async (req, res, next) => {
 
     request.status = 'accepted';
     await request.save();
+
+    // Notify người gửi lời mời rằng đã được chấp nhận
+    const acceptor = await User.findById(req.user._id).select('username email avatar target careerLevel');
+    emit(`user_${request.from}`, 'friend:accepted', {
+      requestId: request._id,
+      by: { _id: acceptor._id, username: acceptor.username, email: acceptor.email, avatar: acceptor.avatar, target: acceptor.target, careerLevel: acceptor.careerLevel },
+    });
 
     res.json({ data: request, message: 'Đã chấp nhận lời mời kết bạn' });
   } catch (err) {

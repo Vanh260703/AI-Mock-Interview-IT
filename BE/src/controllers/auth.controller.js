@@ -34,12 +34,14 @@ async function issueSession(res, user) {
   return {
     accessToken,
     user: {
-      id: user._id,
-      email: user.email,
-      username: user.username,
-      gender: user.gender,
-      avatar: user.avatar,
-      role: user.role,
+      _id:         user._id,
+      email:       user.email,
+      username:    user.username,
+      gender:      user.gender,
+      avatar:      user.avatar,
+      role:        user.role,
+      target:      user.target      ?? null,
+      careerLevel: user.careerLevel ?? null,
     },
   };
 }

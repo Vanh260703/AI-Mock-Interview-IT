@@ -11,6 +11,7 @@
     "test:watch": "jest --watch --runInBand"
   },
   "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
     "axios": "^1.15.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.12.2",
@@ -27,7 +28,8 @@
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
     "nodemailer": "^6.10.1",
-    "redis": "^4.6.12"
+    "redis": "^4.6.12",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "eslint": "^8.56.0",

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, Search, UserPlus, Bell, Check, X, UserMinus, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Search, UserPlus, Bell, Check, X, UserMinus, Loader2, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { socialApi } from '../../api/social.api.js';
 import { TARGET_OPTIONS, CAREER_LEVEL_OPTIONS } from '../../lib/constants.js';
@@ -259,8 +260,9 @@ const RequestsTab = ({ onAccepted }) => {
 
 // ─── Tab: Bạn bè ───────────────────────────────────────────────────────────────
 const FriendsTab = ({ refresh }) => {
-  const [list, setList]     = useState([]);
+  const [list, setList]       = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const load = () => {
     setLoading(true);
@@ -289,10 +291,17 @@ const FriendsTab = ({ refresh }) => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {list.map((u) => (
         <UserCard key={u._id} user={u} action={
-          <button onClick={() => handleUnfriend(u._id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 text-xs font-medium rounded-lg transition-colors">
-            <UserMinus size={13} /> Huỷ kết bạn
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/messages', { state: { toId: u._id } })}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium rounded-lg transition-colors">
+              <MessageCircle size={13} /> Nhắn tin
+            </button>
+            <button onClick={() => handleUnfriend(u._id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 text-xs font-medium rounded-lg transition-colors">
+              <UserMinus size={13} /> Huỷ kết bạn
+            </button>
+          </div>
         } />
       ))}
     </div>

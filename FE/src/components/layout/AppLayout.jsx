@@ -3,10 +3,11 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   BrainCircuit, LayoutDashboard, Play, History,
   BookOpen, User, LogOut, Shield, Users,
-  Search, UserPlus, Check, Loader2,
+  Search, UserPlus, Check, Loader2, Bell, MessageCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/auth.store.js';
+import { useNotificationStore } from '../../store/notification.store.js';
 import { authApi } from '../../api/auth.api.js';
 import { socialApi } from '../../api/social.api.js';
 import { TARGET_OPTIONS, CAREER_LEVEL_OPTIONS } from '../../lib/constants.js';
@@ -16,6 +17,7 @@ const NAV = [
   { to: '/interview/setup', icon: Play,            label: 'Phỏng vấn mới' },
   { to: '/history',         icon: History,         label: 'Lịch sử' },
   { to: '/questions',       icon: BookOpen,        label: 'Ngân hàng câu hỏi' },
+  { to: '/messages',        icon: MessageCircle,   label: 'Tin nhắn' },
   { to: '/community',       icon: Users,           label: 'Cộng đồng' },
   { to: '/profile',         icon: User,            label: 'Hồ sơ' },
 ];
@@ -152,6 +154,99 @@ const FriendSearchBar = () => {
   );
 };
 
+// ─── Notification Bell ────────────────────────────────────────────────────────
+const NotificationBell = () => {
+  const { notifications, markAllRead, markRead } = useNotificationStore();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const count = notifications.filter((n) => !n.read).length;
+
+  const handleOpen = () => {
+    setOpen((o) => !o);
+  };
+
+  const handleMarkAllRead = () => {
+    markAllRead();
+  };
+
+  const iconFor = (type) => {
+    if (type === 'friend_request')  return '👤';
+    if (type === 'friend_accepted') return '🤝';
+    if (type === 'chat_message')    return '💬';
+    return '🔔';
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        onClick={handleOpen}
+        className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors"
+      >
+        <Bell size={20} className="text-gray-500" />
+        {count > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+            {count > 9 ? '9+' : count}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <span className="text-sm font-semibold text-gray-700">Thông báo</span>
+            {count > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+              >
+                Đánh dấu tất cả đã đọc
+              </button>
+            )}
+          </div>
+
+          {/* List */}
+          {notifications.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">Chưa có thông báo nào</p>
+          ) : (
+            <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+              {notifications.map((n) => (
+                <li
+                  key={n.id}
+                  onClick={() => markRead(n.id)}
+                  className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    !n.read ? 'bg-violet-50' : ''
+                  }`}
+                >
+                  <span className="text-xl shrink-0 mt-0.5">{iconFor(n.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 leading-snug">{n.message}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(n.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  {!n.read && (
+                    <span className="w-2 h-2 bg-violet-500 rounded-full shrink-0 mt-1.5" />
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main Layout ──────────────────────────────────────────────────────────────
 const AppLayout = () => {
   const { user, logout } = useAuthStore();
@@ -234,8 +329,9 @@ const AppLayout = () => {
       {/* Content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-end px-6 shrink-0 shadow-sm">
+        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-end gap-3 px-6 shrink-0 shadow-sm">
           <FriendSearchBar />
+          <NotificationBell />
         </header>
 
         {/* Page content */}
