@@ -6,6 +6,8 @@ const { connectRedis } = require('./config/redis');
 const { initSocket }   = require('./config/socket');
 const seedAdmin = require('./seeders/admin.seeder');
 const seedQuestions = require('./seeders/question.seeder');
+const seedUsers          = require('./seeders/user.seeder');
+const seedCodingQuestions = require('./seeders/coding-question.seeder');
 require('./config/bull'); // initialize queues
 
 const PORT = process.env.PORT || 3000;
@@ -16,6 +18,8 @@ const start = async () => {
     await connectRedis();
     await seedAdmin();
     await seedQuestions();
+    await seedUsers();
+    await seedCodingQuestions();
 
     require('./workers/feedback.worker'); // khởi động Bull workers
 

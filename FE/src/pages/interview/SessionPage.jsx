@@ -1,12 +1,60 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { SkipForward, ChevronRight, AlertTriangle } from 'lucide-react';
+import { SkipForward, ChevronRight, AlertTriangle, Code2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { interviewApi } from '../../api/interview.api.js';
 import CountdownTimer from '../../components/interview/CountdownTimer.jsx';
 import AnswerRecorder from '../../components/interview/AnswerRecorder.jsx';
-import { LEVEL_MAP, ROLE_LABELS } from '../../lib/constants.js';
+import CodeEditor from '../../components/interview/CodeEditor.jsx';
+import { LEVEL_MAP } from '../../lib/constants.js';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner.jsx';
+
+// Render question content — supports fenced code blocks (```lang\n...\n```)
+const QuestionContent = ({ text }) => {
+  if (!text) return null;
+
+  const parts = [];
+  const codeBlockRe = /```(\w*)\n([\s\S]*?)```/g;
+  let last = 0;
+  let match;
+
+  while ((match = codeBlockRe.exec(text)) !== null) {
+    if (match.index > last) {
+      parts.push({ type: 'text', content: text.slice(last, match.index) });
+    }
+    parts.push({ type: 'code', lang: match[1] || 'text', content: match[2] });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) {
+    parts.push({ type: 'text', content: text.slice(last) });
+  }
+
+  return (
+    <div className="space-y-3">
+      {parts.map((part, i) =>
+        part.type === 'code' ? (
+          <div key={i} className="rounded-lg overflow-hidden border border-gray-700">
+            {part.lang && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1e1e1e] border-b border-gray-700">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+                <span className="ml-2 text-xs text-gray-400 font-mono">{part.lang}</span>
+              </div>
+            )}
+            <pre className="bg-[#1e1e1e] text-gray-200 text-sm font-mono px-4 py-3 overflow-x-auto leading-relaxed">
+              <code>{part.content}</code>
+            </pre>
+          </div>
+        ) : (
+          <p key={i} className="text-gray-900 leading-relaxed whitespace-pre-wrap">
+            {part.content}
+          </p>
+        )
+      )}
+    </div>
+  );
+};
 
 const SessionPage = () => {
   const { id } = useParams();
@@ -40,7 +88,18 @@ const SessionPage = () => {
   const questions = session?.questions ?? [];
   const currentQ  = questions[currentIndex];
   const isLast    = currentIndex === questions.length - 1;
-  const timePerQ  = session?.settings?.timePerQuestion ?? 120;
+  const isCoding  = currentQ?.type === 'coding';
+
+  // Timer: coding questions use expectedDuration (default 600s), text questions use session setting
+  const timerSeconds = isCoding
+    ? (currentQ?.expectedDuration ?? 600)
+    : (session?.settings?.timePerQuestion ?? 120);
+
+  // Reset content when question changes
+  useEffect(() => {
+    setContent('');
+    setMediaBlob(null);
+  }, [currentQ?._id]);
 
   const resetForNextQ = useCallback(() => {
     setContent('');
@@ -110,67 +169,136 @@ const SessionPage = () => {
           <span className="font-semibold text-gray-800">
             Câu {currentIndex + 1}/{questions.length}
           </span>
-          {role && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium">{role}</span>}
-          {level && <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEVEL_MAP[level]?.color ?? 'bg-gray-100 text-gray-600'}`}>{LEVEL_MAP[level]?.label}</span>}
+          {isCoding && (
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-xs font-medium">
+              <Code2 size={11} /> Coding
+            </span>
+          )}
+          {role && (
+            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium">
+              {role}
+            </span>
+          )}
+          {level && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEVEL_MAP[level]?.color ?? 'bg-gray-100 text-gray-600'}`}>
+              {LEVEL_MAP[level]?.label}
+            </span>
+          )}
         </div>
-        <CountdownTimer key={timerKey} seconds={timePerQ} onExpire={() => submitAndAdvance(false)} />
+        <CountdownTimer key={timerKey} seconds={timerSeconds} onExpire={() => submitAndAdvance(false)} />
       </div>
 
       {/* Progress bar */}
       <div className="w-full h-1 bg-gray-100">
         <div
           className="h-1 bg-violet-500 transition-all duration-500"
-          style={{ width: `${((currentIndex) / questions.length) * 100}%` }}
+          style={{ width: `${(currentIndex / questions.length) * 100}%` }}
         />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Question */}
-        <div className="w-1/2 border-r border-gray-100 p-6 overflow-y-auto">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Câu hỏi</span>
-            {currentQ?.difficulty && (
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                currentQ.difficulty === 'easy' ? 'bg-green-50 text-green-600'
-                : currentQ.difficulty === 'medium' ? 'bg-yellow-50 text-yellow-600'
-                : 'bg-red-50 text-red-600'
-              }`}>{currentQ.difficulty}</span>
+      {/* Content — different layout for coding vs text */}
+      {isCoding ? (
+        // Coding: dark left panel (question) + right editor panel, full height
+        <div className="flex-1 flex overflow-hidden bg-[#1a1a2e]">
+          {/* Question panel — 38% width, dark theme */}
+          <div className="w-[38%] border-r border-gray-700 p-6 overflow-y-auto bg-[#16213e]">
+            <div className="mb-4 flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Đề bài</span>
+              {currentQ?.difficulty && (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  currentQ.difficulty === 'easy'   ? 'bg-green-900/50 text-green-400'
+                  : currentQ.difficulty === 'medium' ? 'bg-yellow-900/50 text-yellow-400'
+                  : 'bg-red-900/50 text-red-400'
+                }`}>{currentQ.difficulty}</span>
+              )}
+              {currentQ?.tags?.length > 0 && currentQ.tags.map((tag) => (
+                <span key={tag} className="px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <h2 className="text-lg font-semibold text-white mb-4 leading-relaxed">
+              {currentQ?.content}
+            </h2>
+
+            {currentQ?.topic && (
+              <p className="mt-2 text-xs text-gray-500">Chủ đề: {currentQ.topic}</p>
+            )}
+
+            {/* Coding question hints section */}
+            <div className="mt-6 p-3 bg-emerald-900/30 border border-emerald-700/40 rounded-lg">
+              <p className="text-xs text-emerald-400 font-medium mb-1">Gợi ý</p>
+              <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
+                <li>Viết code theo từng bước nhỏ</li>
+                <li>Xử lý edge case (null, empty, negative)</li>
+                <li>Tối ưu time & space complexity nếu có thể</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Editor panel — 62% width */}
+          <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+            <div className="flex-1 min-h-0 p-3">
+              <CodeEditor value={content} onChange={setContent} />
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Text: original 50/50 layout, light theme
+        <div className="flex-1 flex overflow-hidden">
+          {/* Question */}
+          <div className="w-1/2 border-r border-gray-100 p-6 overflow-y-auto">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Câu hỏi</span>
+              {currentQ?.difficulty && (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  currentQ.difficulty === 'easy'   ? 'bg-green-50 text-green-600'
+                  : currentQ.difficulty === 'medium' ? 'bg-yellow-50 text-yellow-600'
+                  : 'bg-red-50 text-red-600'
+                }`}>{currentQ.difficulty}</span>
+              )}
+            </div>
+            <div className="text-xl font-medium text-gray-900 leading-relaxed">
+              <QuestionContent text={currentQ?.content} />
+            </div>
+            {currentQ?.topic && (
+              <p className="mt-4 text-xs text-gray-400">Chủ đề: {currentQ.topic}</p>
             )}
           </div>
-          <p className="text-xl font-medium text-gray-900 leading-relaxed">
-            {currentQ?.content}
-          </p>
-          {currentQ?.topic && (
-            <p className="mt-4 text-xs text-gray-400">Chủ đề: {currentQ.topic}</p>
-          )}
-        </div>
 
-        {/* Answer */}
-        <div className="w-1/2 p-6 flex flex-col">
-          <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-3">Câu trả lời của bạn</p>
-          <div className="flex-1">
-            <AnswerRecorder
-              value={content}
-              onChange={setContent}
-              onMediaReady={setMediaBlob}
-            />
+          {/* Answer */}
+          <div className="w-1/2 p-6 flex flex-col">
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-3">
+              Câu trả lời của bạn
+            </p>
+            <div className="flex-1">
+              <AnswerRecorder
+                value={content}
+                onChange={setContent}
+                onMediaReady={setMediaBlob}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Footer actions */}
-      <div className="bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+      <div className={`border-t px-6 py-4 flex items-center justify-between ${isCoding ? 'bg-[#1e1e1e] border-gray-700' : 'bg-white border-gray-100'}`}>
         <button
           type="button"
           onClick={() => submitAndAdvance(true)}
           disabled={isSubmitting}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-xl transition-colors disabled:opacity-50"
+          className={`flex items-center gap-2 px-4 py-2 text-sm rounded-xl border transition-colors disabled:opacity-50 ${
+            isCoding
+              ? 'text-gray-400 hover:text-gray-200 border-gray-600 hover:border-gray-400'
+              : 'text-gray-500 hover:text-gray-700 border-gray-200 hover:border-gray-300'
+          }`}
         >
           <SkipForward size={16} /> Bỏ qua
         </button>
 
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className={`flex items-center gap-2 text-xs ${isCoding ? 'text-gray-500' : 'text-gray-400'}`}>
           <AlertTriangle size={12} /> Thoát sẽ mất tiến độ
         </div>
 
@@ -180,7 +308,9 @@ const SessionPage = () => {
           disabled={isSubmitting}
           className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm transition-colors"
         >
-          {isSubmitting && <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />}
+          {isSubmitting && (
+            <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+          )}
           {isLast ? 'Hoàn thành' : 'Câu tiếp theo'}
           <ChevronRight size={16} />
         </button>

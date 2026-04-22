@@ -22,42 +22,69 @@ const LEVEL_DIFFICULTY = {
 };
 
 // POST /api/interviews
-// Body: { type, level, role, topics, questionCount, timePerQuestion, difficulty }
-// level takes priority over difficulty when provided
+// Body: { type, level, role, tags, questionCount, timePerQuestion }
 exports.createSession = async (req, res, next) => {
   try {
     const {
       type            = 'mixed',
       level           = null,
       role            = 'General',
-      topics          = [],
+      tags            = [],
       questionCount   = 5,
       timePerQuestion = 120,
-      difficulty: difficultyOverride = 'mixed',
     } = req.body;
 
-    if (!level) {
-      return res.status(400).json({ message: 'level is required!' })
+    if (!level) return res.status(400).json({ message: 'level is required!' });
+
+    const difficulty = LEVEL_DIFFICULTY[level] ?? 'medium';
+    const count      = Math.min(20, Math.max(1, parseInt(questionCount)));
+    const project    = { $project: { sampleAnswer: 0, hints: 0 } };
+
+    let questions;
+
+    if (type === 'behavioral') {
+      // Behavioral: không lấy coding questions
+      const filter = {
+        isActive:   true,
+        type:       { $ne: 'coding' },
+        category:   { $in: ['behavioral', 'hr', 'situational'] },
+        level,
+      };
+      if (tags.length > 0) filter.tags = { $in: tags };
+
+      questions = await Question.aggregate([
+        { $match: filter },
+        { $sample: { size: count } },
+        project,
+      ]);
+    } else {
+      // mixed / technical: đảm bảo ~20% là coding questions
+      const codingCount = Math.max(1, Math.ceil(count * 0.2));
+      const textCount   = count - codingCount;
+
+      // Filter cho câu hỏi thường (text)
+      const textFilter = { isActive: true, type: { $ne: 'coding' }, level };
+      if (type === 'technical') textFilter.category = 'technical';
+      if (difficulty)           textFilter.difficulty = difficulty;
+      if (tags.length > 0)      textFilter.tags = { $in: tags };
+      // Role: General hoặc đúng role
+      textFilter.role = role === 'General' ? 'General' : { $in: [role, 'General'] };
+
+      // Filter cho coding questions (linh hoạt hơn về role)
+      const codingFilter = { isActive: true, type: 'coding', level };
+      if (tags.length > 0) codingFilter.tags = { $in: tags };
+      codingFilter.role = role === 'General'
+        ? { $in: ['General', 'FE', 'BE', 'FS', 'Mobile', 'DA'] }
+        : { $in: [role, 'General'] };
+
+      const [textQs, codingQs] = await Promise.all([
+        Question.aggregate([{ $match: textFilter }, { $sample: { size: textCount } }, project]),
+        Question.aggregate([{ $match: codingFilter }, { $sample: { size: codingCount } }, project]),
+      ]);
+
+      // Gộp lại và shuffle
+      questions = [...textQs, ...codingQs].sort(() => Math.random() - 0.5);
     }
-
-    // Derive difficulty from level; fallback to explicit difficulty param
-    const difficulty = level ? LEVEL_DIFFICULTY[level] : difficultyOverride;
-
-    const filter = { isActive: true };
-    if (type === 'technical')  filter.category = 'technical';
-    if (type === 'behavioral') filter.category = { $in: ['behavioral', 'hr'] };
-    if (difficulty && difficulty !== 'mixed') filter.difficulty = difficulty;
-    if (role)           filter.role = role;
-    if (level)          filter.level = level;
-    if (topics.length > 0) filter.topic = { $in: topics };
-
-    const count = Math.min(20, Math.max(1, parseInt(questionCount)));
-
-    const questions = await Question.aggregate([
-      { $match: filter },
-      { $sample: { size: count } },
-      { $project: { sampleAnswer: 0, hints: 0 } },
-    ]);
 
     if (questions.length === 0) {
       return res.status(404).json({ message: 'No questions found for the given config.' });
@@ -66,9 +93,9 @@ exports.createSession = async (req, res, next) => {
     const session = await InterviewSession.create({
       user: req.user._id,
       type,
-      status: 'in_progress',
+      status:    'in_progress',
       questions: questions.map((q) => q._id),
-      settings: { questionCount: questions.length, difficulty, topics, timePerQuestion, role, level },
+      settings:  { questionCount: questions.length, difficulty, tags, timePerQuestion, role, level },
       startedAt: new Date(),
     });
 

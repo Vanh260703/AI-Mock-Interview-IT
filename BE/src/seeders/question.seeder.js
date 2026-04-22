@@ -2155,9 +2155,9 @@ const seedQuestions = async () => {
   try {
     const count = await Question.countDocuments();
     if (count > 0) {
-      // Drop and re-seed to pick up new schema fields (role, level)
-      await Question.deleteMany({});
-      console.log(`[Seeder] Dropped ${count} existing questions for re-seed.`);
+      // Chỉ xóa text questions, giữ nguyên coding questions
+      const deleted = await Question.deleteMany({ type: { $ne: 'coding' } });
+      console.log(`[Seeder] Dropped ${deleted.deletedCount} text questions for re-seed.`);
     }
 
     await Question.insertMany(questions);

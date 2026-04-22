@@ -15,6 +15,13 @@ const questionSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Hình thức trả lời: text (mô tả) hoặc coding (viết code)
+    type: {
+      type: String,
+      enum: ['text', 'coding'],
+      default: 'text',
+    },
+
     // Độ khó
     difficulty: {
       type: String,
