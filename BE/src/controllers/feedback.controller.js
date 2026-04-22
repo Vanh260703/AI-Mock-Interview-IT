@@ -66,7 +66,11 @@ exports.getSessionFeedback = async (req, res, next) => {
     if (!session) return res.status(404).json({ message: 'Session not found' });
 
     const feedbacks = await Feedback.find({ session: session._id })
-      .populate('answer', 'content duration question')
+      .populate({
+        path: 'answer',
+        select: 'content duration status question',
+        populate: { path: 'question', select: 'content type difficulty topic tags' },
+      })
       .sort({ createdAt: 1 });
 
     const answerFeedbacks  = feedbacks.filter((f) => f.type === 'answer');
