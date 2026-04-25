@@ -189,13 +189,17 @@ exports.submitAnswer = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Enqueue AI grading ngay sau khi submit (chỉ với status submitted)
+    // Enqueue AI grading ngay sau khi submit (chỉ với status submitted, không phải coding)
+    // Coding questions được chấm điểm sau khi session hoàn thành (trong completeSession)
     if (status === 'submitted') {
-      await queues.feedbackQueue.add(
-        'FeedbackJob',
-        { answerId: answer._id, sessionId: session._id },
-        JOB_OPTIONS
-      );
+      const question = await Question.findById(questionId).select('type');
+      if (question?.type !== 'coding') {
+        await queues.feedbackQueue.add(
+          'FeedbackJob',
+          { answerId: answer._id, sessionId: session._id },
+          JOB_OPTIONS
+        );
+      }
     }
 
     res.json({ data: { answer } });
@@ -223,19 +227,40 @@ exports.completeSession = async (req, res, next) => {
       { new: true }
     );
 
-    // Nếu tất cả answers đã được graded trước khi complete → trigger SessionFeedbackJob luôn
-    const [submittedCount, gradedCount, existingSessionFeedback] = await Promise.all([
-      Answer.countDocuments({ session: session._id, status: 'submitted' }),
-      Feedback.countDocuments({ session: session._id, type: 'answer' }),
-      Feedback.findOne({ session: session._id, type: 'session' }),
+    // Queue FeedbackJob cho các coding answers chưa được chấm điểm
+    // (coding answers không được queue trong submitAnswer — deferring đến session completion)
+    const [submittedAnswers, gradedAnswerIds] = await Promise.all([
+      Answer.find({ session: session._id, status: 'submitted' }).populate('question', 'type'),
+      Feedback.find({ session: session._id, type: 'answer' }, 'answer').then((fbs) => new Set(fbs.map((f) => f.answer?.toString()))),
     ]);
 
-    if (gradedCount >= submittedCount && submittedCount > 0 && !existingSessionFeedback) {
+    const ungradedCoding = submittedAnswers.filter(
+      (a) => a.question?.type === 'coding' && !gradedAnswerIds.has(a._id.toString())
+    );
+
+    for (const ans of ungradedCoding) {
       await queues.feedbackQueue.add(
-        'SessionFeedbackJob',
-        { sessionId: session._id },
-        { attempts: 3, backoff: { type: 'exponential', delay: 5000 } }
+        'FeedbackJob',
+        { answerId: ans._id, sessionId: session._id },
+        JOB_OPTIONS
       );
+    }
+
+    // Nếu không có coding answers cần chấm → tất cả đã graded → trigger SessionFeedbackJob ngay
+    if (ungradedCoding.length === 0) {
+      const [submittedCount, gradedCount, existingSessionFeedback] = await Promise.all([
+        Answer.countDocuments({ session: session._id, status: 'submitted' }),
+        Feedback.countDocuments({ session: session._id, type: 'answer' }),
+        Feedback.findOne({ session: session._id, type: 'session' }),
+      ]);
+
+      if (gradedCount >= submittedCount && submittedCount > 0 && !existingSessionFeedback) {
+        await queues.feedbackQueue.add(
+          'SessionFeedbackJob',
+          { sessionId: session._id },
+          { attempts: 3, backoff: { type: 'exponential', delay: 5000 } }
+        );
+      }
     }
 
     res.json({ data: { session: updatedSession } });
