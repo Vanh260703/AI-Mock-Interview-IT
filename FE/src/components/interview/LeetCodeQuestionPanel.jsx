@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Lightbulb } from 'lucide-react';
-import MarkdownContent from '../ui/MarkdownContent.jsx';
 
 // ─── Content Parser ───────────────────────────────────────────────────────────
 // Tách markdown content thành: description, examples[], constraints[]
@@ -113,6 +112,41 @@ function extractTitle(content, topic) {
   return topic ?? 'Coding Challenge';
 }
 
+// ─── Description Block ────────────────────────────────────────────────────────
+// Render toàn bộ description thành 1 thẻ <p> duy nhất — text chảy liền mạch.
+// Code blocks riêng (e.g. node definition) render nhỏ gọn bên dưới.
+function DescriptionBlock({ text }) {
+  if (!text) return null;
+
+  // Tách code fences ra khỏi prose text
+  const codeBlocks = [];
+  const proseText = text
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_, _lang, code) => {
+      codeBlocks.push(code.trim());
+      return ''; // xoá khỏi prose
+    })
+    // Collapse multiple newlines/spaces thành 1 khoảng trắng
+    .replace(/\n+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  return (
+    <div>
+      <p className="text-gray-300 text-sm leading-relaxed">
+        <InlineMd text={proseText} />
+      </p>
+      {codeBlocks.map((cb, i) => (
+        <pre
+          key={i}
+          className="bg-gray-800/50 text-gray-400 text-xs font-mono px-3 py-2 rounded-md mt-2 overflow-x-auto border border-gray-700/40 leading-relaxed"
+        >
+          {cb}
+        </pre>
+      ))}
+    </div>
+  );
+}
+
 // ─── Inline Markdown (safe, no dangerouslySetInnerHTML) ───────────────────────
 function InlineMd({ text }) {
   if (!text) return null;
@@ -136,7 +170,7 @@ function InlineMd({ text }) {
       parts.push(<strong key={k++} className="text-white font-semibold">{bm[1]}</strong>);
     } else {
       parts.push(
-        <code key={k++} className="bg-gray-800 text-orange-300 px-1.5 py-0.5 rounded font-mono text-[11px] border border-gray-700/50">
+        <code key={k++} className="bg-[rgba(110,118,129,0.12)] text-gray-200 px-[5px] py-[2px] rounded font-mono text-[0.875em] border border-[rgba(110,118,129,0.2)]">
           {cm[1]}
         </code>
       );
@@ -233,7 +267,7 @@ const LeetCodeQuestionPanel = ({ question }) => {
       {/* ── Description ── */}
       {parsed.description && (
         <div className="px-6 py-5 border-b border-gray-700/30">
-          <MarkdownContent theme="dark">{parsed.description}</MarkdownContent>
+          <DescriptionBlock text={parsed.description} />
         </div>
       )}
 

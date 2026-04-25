@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
  * MarkdownContent — render markdown với code block theo style IDE dark.
  * theme: 'dark' (dùng trong dark panel) | 'light' (default)
  */
-const MarkdownContent = ({ children, theme = 'light' }) => {
+const MarkdownContent = ({ children, theme = 'light', compact = false }) => {
   const isDark = theme === 'dark';
 
   return (
@@ -20,15 +20,24 @@ const MarkdownContent = ({ children, theme = 'light' }) => {
           if (inline) {
             return (
               <code
-                className={`px-1.5 py-0.5 rounded text-[0.85em] font-mono ${
+                className={`px-[5px] py-[2px] rounded text-[0.875em] font-mono ${
                   isDark
-                    ? 'bg-gray-700 text-emerald-300'
+                    ? 'bg-[rgba(110,118,129,0.12)] text-gray-200 border border-[rgba(110,118,129,0.2)]'
                     : 'bg-gray-100 text-violet-700'
                 }`}
                 {...props}
               >
                 {code}
               </code>
+            );
+          }
+
+          // compact mode — dùng trong description panel (không cần Mac toolbar)
+          if (compact) {
+            return (
+              <pre className="bg-gray-800/50 text-gray-300 text-[13px] font-mono px-3 py-2 rounded-md my-2 overflow-x-auto leading-relaxed border border-gray-700/40">
+                <code>{code}</code>
+              </pre>
             );
           }
 
