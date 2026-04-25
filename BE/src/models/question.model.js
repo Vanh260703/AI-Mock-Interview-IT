@@ -8,6 +8,12 @@ const questionSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Tên bài toán (dùng cho coding questions, kiểu LeetCode)
+    title: {
+      type: String,
+      trim: true,
+    },
+
     // Loại câu hỏi
     category: {
       type: String,

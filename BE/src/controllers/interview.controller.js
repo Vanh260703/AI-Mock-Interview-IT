@@ -38,7 +38,7 @@ exports.createSession = async (req, res, next) => {
 
     const difficulty = LEVEL_DIFFICULTY[level] ?? 'medium';
     const count      = Math.min(20, Math.max(1, parseInt(questionCount)));
-    const project    = { $project: { sampleAnswer: 0, hints: 0 } };
+    const project    = { $project: { sampleAnswer: 0 } };
 
     let questions;
 
@@ -137,7 +137,7 @@ exports.getSession = async (req, res, next) => {
   try {
     const session = await InterviewSession
       .findOne({ _id: req.params.id, user: req.user._id })
-      .populate('questions', '-sampleAnswer -hints');
+      .populate('questions', '-sampleAnswer');
 
     if (!session) return res.status(404).json({ message: 'Session not found' });
 

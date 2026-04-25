@@ -6,6 +6,7 @@ import { interviewApi } from '../../api/interview.api.js';
 import CountdownTimer from '../../components/interview/CountdownTimer.jsx';
 import AnswerRecorder from '../../components/interview/AnswerRecorder.jsx';
 import CodeEditor from '../../components/interview/CodeEditor.jsx';
+import LeetCodeQuestionPanel from '../../components/interview/LeetCodeQuestionPanel.jsx';
 import MarkdownContent from '../../components/ui/MarkdownContent.jsx';
 import { LEVEL_MAP } from '../../lib/constants.js';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner.jsx';
@@ -152,46 +153,14 @@ const SessionPage = () => {
 
       {/* Content — different layout for coding vs text */}
       {isCoding ? (
-        // Coding: dark left panel (question) + right editor panel, full height
+        // Coding: dark left panel (LeetCode-style question) + right editor panel
         <div className="flex-1 flex overflow-hidden bg-[#1a1a2e]">
-          {/* Question panel — 38% width, dark theme */}
-          <div className="w-[38%] border-r border-gray-700 p-6 overflow-y-auto bg-[#16213e]">
-            <div className="mb-4 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Đề bài</span>
-              {currentQ?.difficulty && (
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                  currentQ.difficulty === 'easy'   ? 'bg-green-900/50 text-green-400'
-                  : currentQ.difficulty === 'medium' ? 'bg-yellow-900/50 text-yellow-400'
-                  : 'bg-red-900/50 text-red-400'
-                }`}>{currentQ.difficulty}</span>
-              )}
-              {currentQ?.tags?.length > 0 && currentQ.tags.map((tag) => (
-                <span key={tag} className="px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            <div className="mb-4">
-              <MarkdownContent theme="dark">{currentQ?.content ?? ''}</MarkdownContent>
-            </div>
-
-            {currentQ?.topic && (
-              <p className="mt-2 text-xs text-gray-500">Chủ đề: {currentQ.topic}</p>
-            )}
-
-            {/* Coding question hints section */}
-            <div className="mt-6 p-3 bg-emerald-900/30 border border-emerald-700/40 rounded-lg">
-              <p className="text-xs text-emerald-400 font-medium mb-1">Gợi ý</p>
-              <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
-                <li>Viết code theo từng bước nhỏ</li>
-                <li>Xử lý edge case (null, empty, negative)</li>
-                <li>Tối ưu time & space complexity nếu có thể</li>
-              </ul>
-            </div>
+          {/* Question panel — 40% width, LeetCode dark theme */}
+          <div className="w-[40%] border-r border-gray-700/60 overflow-hidden bg-[#16213e] flex flex-col">
+            <LeetCodeQuestionPanel question={currentQ} />
           </div>
 
-          {/* Editor panel — 62% width */}
+          {/* Editor panel — 60% width */}
           <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
             <div className="flex-1 min-h-0 p-3">
               <CodeEditor value={content} onChange={setContent} />
