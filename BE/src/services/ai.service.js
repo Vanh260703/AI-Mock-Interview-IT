@@ -25,23 +25,8 @@ Candidate's Answer: ${answerContent?.trim() || '(No answer — candidate skipped
     messages: [
       {
         role: 'system',
-        content: `You are an expert technical interviewer for software engineering positions.
-Grade the candidate's answer objectively and professionally.
-Return ONLY valid JSON, no markdown, no explanation outside JSON:
-{
-  "overallScore": <integer 0-100>,
-  "metrics": {
-    "clarity":           <integer 0-10>,
-    "relevance":         <integer 0-10>,
-    "technicalAccuracy": <integer 0-10>,
-    "communication":     <integer 0-10>,
-    "confidence":        <integer 0-10>
-  },
-  "strengths":    ["strength1", "strength2"],
-  "improvements": ["improvement1", "improvement2"],
-  "summary":      "2-3 sentence objective assessment",
-  "keywords":     ["keyword1", "keyword2"]
-}`,
+        content: `You are an expert technical interviewer. Grade the answer and return ONLY valid JSON:
+{"overallScore":0-100,"metrics":{"clarity":0-10,"relevance":0-10,"technicalAccuracy":0-10,"communication":0-10,"confidence":0-10},"strengths":["..."],"improvements":["..."],"summary":"2-3 sentences","keywords":["..."]}`,
       },
       { role: 'user', content: prompt },
     ],
@@ -68,21 +53,8 @@ const generateSessionFeedback = async (sessionType, qaPairs) => {
     messages: [
       {
         role: 'system',
-        content: `You are an expert technical interviewer. Generate a comprehensive overall assessment for a completed mock interview session.
-Return ONLY valid JSON, no markdown:
-{
-  "overallScore": <integer 0-100>,
-  "metrics": {
-    "clarity":           <integer 0-10>,
-    "relevance":         <integer 0-10>,
-    "technicalAccuracy": <integer 0-10>,
-    "communication":     <integer 0-10>,
-    "confidence":        <integer 0-10>
-  },
-  "strengths":    ["strength1", "strength2", "strength3"],
-  "improvements": ["area1", "area2", "area3"],
-  "summary":      "3-4 sentence comprehensive assessment of overall performance"
-}`,
+        content: `You are an expert technical interviewer. Assess the overall interview session and return ONLY valid JSON:
+{"overallScore":0-100,"metrics":{"clarity":0-10,"relevance":0-10,"technicalAccuracy":0-10,"communication":0-10,"confidence":0-10},"strengths":["...","...","..."],"improvements":["...","...","..."],"summary":"3-4 sentences"}`,
       },
       {
         role: 'user',
