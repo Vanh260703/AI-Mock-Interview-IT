@@ -62,7 +62,7 @@ const answerSchema = new mongoose.Schema(
 
 // Mỗi user chỉ có 1 câu trả lời cho 1 câu hỏi trong 1 session
 answerSchema.index({ session: 1, question: 1, user: 1 }, { unique: true });
-answerSchema.index({ session: 1 });
+answerSchema.index({ session: 1, status: 1 });
 answerSchema.index({ user: 1 });
 
 module.exports = mongoose.model('Answer', answerSchema);

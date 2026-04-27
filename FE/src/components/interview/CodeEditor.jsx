@@ -60,9 +60,10 @@ const CodeEditor = ({ value, onChange }) => {
 
   const handleMount = (editor) => {
     editorRef.current = editor;
-    // If no value yet, init with starter code
+    // Set starter code directly in editor without pushing to parent state.
+    // Parent content stays '' until user actually types → allows skip detection.
     if (!value) {
-      onChange(STARTERS[lang]);
+      editor.setValue(STARTERS[lang]);
     }
   };
 
@@ -73,7 +74,8 @@ const CodeEditor = ({ value, onChange }) => {
     const current = editorRef.current?.getValue() ?? '';
     const isDefaultCode = Object.values(STARTERS).some((s) => s.trim() === current.trim());
     if (!current.trim() || isDefaultCode) {
-      onChange(STARTERS[newLang]);
+      // Reset editor visually without touching parent content state
+      editorRef.current?.setValue(STARTERS[newLang]);
     }
   };
 
@@ -129,7 +131,7 @@ const CodeEditor = ({ value, onChange }) => {
           height="100%"
           language={lang}
           theme="vs-dark"
-          value={value ?? STARTERS[lang]}
+          value={value || STARTERS[lang]}
           onMount={handleMount}
           onChange={(val) => onChange(val ?? '')}
           options={{

@@ -63,12 +63,18 @@ exports.createSession = async (req, res, next) => {
       const textCount   = count - codingCount;
 
       // Filter cho câu hỏi thường (text)
-      const textFilter = { isActive: true, type: { $ne: 'coding' }, level };
-      if (type === 'technical') textFilter.category = 'technical';
-      if (difficulty)           textFilter.difficulty = difficulty;
-      if (tags.length > 0)      textFilter.tags = { $in: tags };
-      // Role: General hoặc đúng role
-      textFilter.role = role === 'General' ? 'General' : { $in: [role, 'General'] };
+      // technical: dùng difficulty thay vì level vì technical questions trong DB chỉ có
+      // fresher/junior/senior (không có intern). difficulty map đúng: easy covers both intern+fresher.
+      // mixed: dùng level như cũ để behavioral/hr questions match đúng.
+      const textFilter = type === 'technical'
+        ? { isActive: true, type: { $ne: 'coding' }, category: 'technical', difficulty }
+        : { isActive: true, type: { $ne: 'coding' }, level };
+      if (type !== 'technical' && difficulty) textFilter.difficulty = difficulty;
+      if (tags.length > 0)                    textFilter.tags = { $in: tags };
+      // Role: General → broad match (giống coding filter), specific role → lấy đúng role + General
+      textFilter.role = role === 'General'
+        ? { $in: ['General', 'FE', 'BE', 'FS', 'BA', 'DA', 'DS', 'DevOps', 'Mobile'] }
+        : { $in: [role, 'General'] };
 
       // Filter cho coding questions (linh hoạt hơn về role)
       const codingFilter = { isActive: true, type: 'coding', level };
