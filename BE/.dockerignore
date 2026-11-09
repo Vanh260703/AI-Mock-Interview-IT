@@ -3,3 +3,8 @@ node_modules
 *.log
 dist
 .git
+tests
+coverage
+jest.config.js
+.DS_Store
+.env.*

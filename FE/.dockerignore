@@ -1,0 +1,8 @@
+node_modules
+dist
+# .env.production được Vite đọc lúc build nên giữ lại; chỉ bỏ file local
+.env.local
+.env.*.local
+*.log
+.git
+.DS_Store
