@@ -4,32 +4,35 @@ const User = require('../models/user.model');
 const { getRedis } = require('../config/redis');
 const {
   generateAccessToken,
-  generateRefreshToken,
   generateRandomToken,
   hashToken,
 } = require('../services/token.service');
+const {
+  createSession,
+  rotateSession,
+  revokeSession,
+  ROTATE_RESULT,
+} = require('../services/refreshToken.service');
 const { sendVerificationEmail, sendResetPasswordEmail } = require('../services/email.service');
 
-const REFRESH_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
+const refreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+});
 
-const setRefreshCookie = (res, token) => {
-  res.cookie('refreshToken', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: REFRESH_TTL * 1000,
-  });
+const setRefreshCookie = (res, token, maxAgeMs) => {
+  res.cookie('refreshToken', token, { ...refreshCookieOptions(), maxAge: maxAgeMs });
 };
+
+const clearRefreshCookie = (res) => res.clearCookie('refreshToken', refreshCookieOptions());
 
 // Issue access token + refresh token, set cookie
 async function issueSession(res, user) {
   const payload = { id: user._id, role: user.role };
   const accessToken = generateAccessToken(payload);
-  const refreshToken = generateRefreshToken(payload);
-
-  const redis = getRedis();
-  await redis.set(`refresh:${user._id}`, hashToken(refreshToken), { EX: REFRESH_TTL });
-  setRefreshCookie(res, refreshToken);
+  const { token: refreshToken, maxAgeMs } = await createSession(payload);
+  setRefreshCookie(res, refreshToken, maxAgeMs);
 
   return {
     accessToken,
@@ -163,13 +166,12 @@ exports.logout = async (req, res, next) => {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-        const redis = getRedis();
-        await redis.del(`refresh:${decoded.id}`);
+        await revokeSession(decoded.id);
       } catch {
         // token invalid — still clear cookie
       }
     }
-    res.clearCookie('refreshToken');
+    clearRefreshCookie(res);
     res.json({ message: 'Logged out successfully' });
   } catch (err) {
     next(err);
@@ -182,17 +184,23 @@ exports.refreshToken = async (req, res) => {
     const token = req.cookies?.refreshToken;
     if (!token) return res.status(401).json({ message: 'No refresh token' });
 
-    const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    const { status, decoded, token: newToken, maxAgeMs } = await rotateSession(token);
 
-    const redis = getRedis();
-    const stored = await redis.get(`refresh:${decoded.id}`);
-    if (!stored || stored !== hashToken(token)) {
+    if (status === ROTATE_RESULT.REUSED) {
+      console.warn(`[Auth] Refresh token reuse detected — session revoked for user ${decoded.id}`);
+    }
+    if (status !== ROTATE_RESULT.ROTATED && status !== ROTATE_RESULT.GRACE) {
+      clearRefreshCookie(res);
       return res.status(401).json({ message: 'Invalid refresh token' });
     }
+
+    // GRACE: request song song từ tab khác — trình duyệt đã nhận cookie mới, chỉ cấp access token
+    if (newToken) setRefreshCookie(res, newToken, maxAgeMs);
 
     const accessToken = generateAccessToken({ id: decoded.id, role: decoded.role });
     res.json({ accessToken });
   } catch {
+    clearRefreshCookie(res);
     res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 };
@@ -248,8 +256,7 @@ exports.resetPassword = async (req, res, next) => {
     await user.save();
 
     // Invalidate active session
-    const redis = getRedis();
-    await redis.del(`refresh:${user._id}`);
+    await revokeSession(user._id);
 
     res.json({ message: 'Password reset successfully. Please log in.' });
   } catch (err) {

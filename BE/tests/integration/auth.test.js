@@ -83,6 +83,83 @@ describe('Auth Endpoints', () => {
     });
   });
 
+  // ─── POST /api/auth/refresh-token ──────────────────────────────────────────
+  describe('POST /api/auth/refresh-token', () => {
+    const getRefreshCookie = (res) =>
+      (res.headers['set-cookie'] || []).find((c) => c.startsWith('refreshToken='))?.split(';')[0];
+
+    const login = async () => {
+      const res = await request(app).post('/api/auth/login').send({
+        identifier: 'refresh@test.com', password: 'Test@123456',
+      });
+      return getRefreshCookie(res);
+    };
+
+    const refresh = (cookie) => request(app).post('/api/auth/refresh-token').set('Cookie', cookie);
+
+    beforeEach(async () => {
+      await User.create({
+        username: 'refreshuser', email: 'refresh@test.com',
+        password: 'Test@123456', isEmailVerified: true,
+      });
+    });
+
+    it('should rotate the refresh token and return a new accessToken', async () => {
+      const cookie = await login();
+      const res = await refresh(cookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('accessToken');
+      const newCookie = getRefreshCookie(res);
+      expect(newCookie).toBeDefined();
+      expect(newCookie).not.toBe(cookie);
+
+      expect((await refresh(newCookie)).status).toBe(200);
+    });
+
+    it('should accept the previous token within the grace window without rotating again', async () => {
+      const cookie = await login();
+      await refresh(cookie);
+
+      const res = await refresh(cookie);
+      expect(res.status).toBe(200);
+      expect(getRefreshCookie(res)).toBeUndefined();
+    });
+
+    it('should revoke the session when an old token is reused after grace', async () => {
+      const t1 = await login();
+      const t2 = getRefreshCookie(await refresh(t1));
+      const t3 = getRefreshCookie(await refresh(t2));
+
+      // t1 đã ra khỏi grace (prev hiện là t2) → reuse
+      expect((await refresh(t1)).status).toBe(401);
+      // Toàn bộ phiên bị thu hồi, kể cả token mới nhất
+      expect((await refresh(t3)).status).toBe(401);
+    });
+
+    it('should reject a token from a replaced session without revoking the new one', async () => {
+      const oldSession = await login();
+      const newSession = await login();
+
+      expect((await refresh(oldSession)).status).toBe(401);
+      expect((await refresh(newSession)).status).toBe(200);
+    });
+
+    it('should reject refresh after logout', async () => {
+      const loginRes = await request(app).post('/api/auth/login').send({
+        identifier: 'refresh@test.com', password: 'Test@123456',
+      });
+      const cookie = getRefreshCookie(loginRes);
+
+      await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+        .set('Cookie', cookie);
+
+      expect((await refresh(cookie)).status).toBe(401);
+    });
+  });
+
   // ─── Protected route guard ─────────────────────────────────────────────────
   describe('Protected route', () => {
     it('should return 401 when no token provided', async () => {
